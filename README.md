@@ -1,6 +1,3 @@
-# Code Companion Node.js TypeScript Template
-
-This repository provides a template for building Fastify-based Node.js applications using TypeScript. It includes a pre-configured setup for development, testing, linting, and deployment.
 
 ## Features
 
@@ -115,25 +112,3 @@ This repository includes a GitHub Actions workflow for building, linting, and te
 - `npm run docker:build`: Build the Docker image.
 - `npm run docker:run`: Run the Docker container.
 
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Commit your changes with clear and concise messages.
-4. Submit a pull request.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-## Author
-
-Created by [Niels Van den Broeck](https://github.com/CodeCompanionBE).
-
-## Acknowledgments
-
-- [Fastify](https://www.fastify.io/) for the web framework.
-- [TypeScript](https://www.typescriptlang.org/) for type safety.
-- [Docker](https://www.docker.com/) for containerization.
