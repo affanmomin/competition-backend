@@ -22,9 +22,7 @@ async function connectDB() {
   try {
     await client.connect();
     console.log('Connected to Supabase PostgreSQL!');
-    // You can now run queries, e.g.:
-    // const res = await client.query('SELECT NOW()');
-    // console.log(res.rows);
+
   } catch (err) {
     console.error('Connection error:', err);
   }

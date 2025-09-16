@@ -36,6 +36,9 @@ importers:
       '@playwright/test':
         specifier: ^1.55.0
         version: 1.55.0
+      '@types/pg':
+        specifier: ^8.15.5
+        version: 8.15.5
       '@types/supertest':
         specifier: ^6.0.3
         version: 6.0.3
@@ -192,6 +195,9 @@ packages:
 
   '@types/node@24.5.0':
     resolution: {integrity: sha512-y1dMvuvJspJiPSDZUQ+WMBvF7dpnEqN4x9DDC9ie5Fs/HUZJA3wFp7EhHoVaKX/iI0cRoECV8X2jL8zi0xrHCg==}
+
+  '@types/pg@8.15.5':
+    resolution: {integrity: sha512-LF7lF6zWEKxuT3/OR8wAZGzkg4ENGXFNyiV/JeOt9z5B+0ZVwbql9McqX5c/WStFq1GaGso7H1AzP/qSzmlCKQ==}
 
   '@types/superagent@8.1.9':
     resolution: {integrity: sha512-pTVjI73witn+9ILmoJdajHGW2jkSaOzhiFYF1Rd3EQ94kymLqB9PjD9ISg7WaALC7+dCHT0FGe9T2LktLq/3GQ==}
@@ -946,6 +952,12 @@ snapshots:
   '@types/node@24.5.0':
     dependencies:
       undici-types: 7.12.0
+
+  '@types/pg@8.15.5':
+    dependencies:
+      '@types/node': 24.5.0
+      pg-protocol: 1.10.3
+      pg-types: 2.2.0
 
   '@types/superagent@8.1.9':
     dependencies:
