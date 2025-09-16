@@ -11,6 +11,11 @@ const server = (0, fastify_1.default)({
         level: process.env.LOG_LEVEL || 'info',
     },
 });
+// Register CORS
+server.register(require('@fastify/cors'), {
+    origin: true,
+    credentials: true
+});
 server.register(autoload_1.default, {
     dir: node_path_1.default.join(__dirname, 'routes'),
 });
