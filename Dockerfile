@@ -7,15 +7,18 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies for build)
+RUN npm install
 
 # Copy source code
 COPY src ./src
 COPY tsconfig.json ./
 
-# Install dev dependencies and build
-RUN npm install && npm run build
+# Build the application
+RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
 
 EXPOSE ${PORT}
 CMD [ "node", "dist/index.js" ]
