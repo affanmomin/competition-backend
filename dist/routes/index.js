@@ -28,6 +28,12 @@ const register = (server, options, done) => __awaiter(void 0, void 0, void 0, fu
         },
         handler: getStatus,
     });
+    // Add a test endpoint for CORS
+    server.get('/test', {
+        handler: (request, reply) => __awaiter(void 0, void 0, void 0, function* () {
+            return { message: 'CORS test successful', timestamp: new Date().toISOString() };
+        })
+    });
     done();
 });
 exports.default = register;

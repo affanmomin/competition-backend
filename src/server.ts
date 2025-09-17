@@ -8,6 +8,12 @@ const server = Fastify({
   },
 });
 
+// Register CORS
+server.register(require('@fastify/cors'), {
+  origin: true,
+  credentials: true
+});
+
 server.register(autoLoad, {
   dir: path.join(__dirname, 'routes'),
 });
