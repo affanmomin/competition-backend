@@ -55,4 +55,98 @@ export default async function cardRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  // Get all competitors for a user
+  fastify.get('/competitors/:user_id', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['user_id'],
+        properties: {
+          user_id: { type: 'string' }
+        }
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', format: 'date-time' },
+          end_date: { type: 'string', format: 'date-time' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { user_id } = request.params as { user_id: string };
+      const { start_date, end_date } = request.query as {
+        start_date?: string;
+        end_date?: string;
+      };
+
+      const params = QueryParamsSchema.parse({
+        user_id,
+        start_date,
+        end_date
+      });
+
+      const results = await cardService.executeQueries(['all-competitors'], params);
+
+      return {
+        success: true,
+        data: results['all-competitors' as keyof typeof results] || []
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      reply.status(400).send({
+        success: false,
+        error: errorMessage
+      });
+    }
+  });
+
+  // Get all leads for a user
+  fastify.get('/leads/:user_id', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['user_id'],
+        properties: {
+          user_id: { type: 'string' }
+        }
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', format: 'date-time' },
+          end_date: { type: 'string', format: 'date-time' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { user_id } = request.params as { user_id: string };
+      const { start_date, end_date } = request.query as {
+        start_date?: string;
+        end_date?: string;
+      };
+
+      const params = QueryParamsSchema.parse({
+        user_id,
+        start_date,
+        end_date
+      });
+
+      const results = await cardService.executeQueries(['all-leads'], params);
+
+      return {
+        success: true,
+        data: results['all-leads' as keyof typeof results] || []
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      reply.status(400).send({
+        success: false,
+        error: errorMessage
+      });
+    }
+  });
 };
