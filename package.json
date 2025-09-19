@@ -16,7 +16,7 @@
   "author": "companalysis",
   "license": "MIT",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.2.4",
     "@playwright/test": "^1.55.0",
     "@types/pg": "^8.15.5",
     "@types/supertest": "^6.0.3",
