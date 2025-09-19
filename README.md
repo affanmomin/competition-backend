@@ -112,3 +112,60 @@ This repository includes a GitHub Actions workflow for building, linting, and te
 - `npm run docker:build`: Build the Docker image.
 - `npm run docker:run`: Run the Docker container.
 
+## BullMQ Cron Jobs & Admin UI
+
+### Setup
+
+1. Copy env:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Start Redis (Docker):
+
+   ```bash
+   docker compose up -d redis
+   ```
+
+3. Seed the cron schedule (idempotent):
+
+   ```bash
+   npm run seed:schedules
+   ```
+
+4. Start the app (existing):
+
+   ```bash
+   npm start
+   ```
+
+5. Start worker in separate terminal:
+
+   ```bash
+   npm run worker
+   ```
+
+6. Admin UI:
+
+   - Visit `http://localhost:3000/admin`
+
+7. Manual run:
+
+   ```bash
+   curl -X POST http://localhost:3000/jobs/daily-report/run-now
+   ```
+
+8. List/Clear repeatables:
+
+   ```bash
+   npm run repeats:list
+   npm run repeats:clear
+   ```
+
+Notes:
+
+- Repeatable job `daily-report` runs at `00:05` in `CRON_TZ` (default Asia/Kolkata).
+- Jobs retry up to 3 times with exponential backoff.
+- Keys are isolated by `QUEUE_PREFIX` using Redis hash-tags.
+
