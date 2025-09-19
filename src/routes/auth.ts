@@ -1,4 +1,5 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { auth } from '../auth';
 
 export default async function authRoutes(fastify: FastifyInstance) {
@@ -77,13 +78,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // Sign out endpoint
   fastify.post('/api/signout', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      await auth.api.signOut({
+      // First check if there's an active session
+      const session = await auth.api.getSession({
         headers: request.headers as any,
       });
       
+      if (session) {
+        await auth.api.signOut({
+          headers: request.headers as any,
+        });
+      }
       return { success: true };
     } catch (error: any) {
       console.error('Signout error:', error);
+      if (error.body?.code === 'FAILED_TO_GET_SESSION') {
+        console.log('No active session found during signout, treating as success');
+        return { success: true };
+      }
+      
       return reply.code(500).send({ error: error.message || 'Signout failed' });
     }
   });
