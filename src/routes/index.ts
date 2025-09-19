@@ -3,6 +3,7 @@ import searchRoutes from './search';
 import twitterRoutes from './twitter';
 import authRoutes from './auth';
 import cardRoutes from './card';
+import competitorsRoutes from './competitors';
 
 const register: FastifyPluginCallback = async (server, options, done) => {
   // Register search routes
@@ -10,6 +11,7 @@ const register: FastifyPluginCallback = async (server, options, done) => {
   await twitterRoutes(server, {});
   await authRoutes(server);
   await cardRoutes(server);
+  await competitorsRoutes(server);
   const getStatus: RouteHandlerMethod = async (request, reply) => {
     return reply.status(200).send('API is live');
   };
