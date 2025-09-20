@@ -68,6 +68,9 @@ export async function analyzeCompetitorData(request: GeminiAnalysisRequest): Pro
 
   const defaultPrompt = `# You are a precision analysis engine for competitor research. Your task is to extract ONLY high-value, structured insights from social media posts with maximum efficiency.
 
+  IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
+
+
 ## 🎯 Analysis Categories (Extract ONLY these 4)
 
 ### 1. **FEATURES** 
