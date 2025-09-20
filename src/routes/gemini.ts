@@ -11,6 +11,7 @@ import {
   CompetitorAnalysisResponseSchema,
   TextGenerationResponseSchema
 } from "../schemas/gemini-schemas";
+import { insertCompetitorAnalysisData } from "../services/competitor-analysis-service";
 
 /**
  * Gemini API routes for AI-powered analysis and text generation
@@ -26,7 +27,7 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
       tags: ["gemini"],
       body: {
         type: "object",
-        required: ["dataset"],
+        required: ["dataset", "user_id"],
         properties: {
           dataset: {
             type: "array",
@@ -37,6 +38,16 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
             type: "string",
             description: "Optional custom prompt for analysis",
             maxLength: 2000
+          },
+          user_id: {
+            type: "string",
+            description: "ID of the user performing the analysis",
+            minLength: 1
+          },
+          competitor_id: {
+            type: "string",
+            description: "Optional ID of the competitor being analyzed",
+            minLength: 1
           }
         }
       },
@@ -79,6 +90,17 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                       reason: { type: "string" }
                     }
                   }
+                },
+                alternatives: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      evidence_ids: { type: "array", items: { type: "string" } },
+                      platform: { type: "string" }
+                    }
+                  }
                 }
               }
             }
@@ -114,6 +136,13 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
         // Validate the response
         const validatedResult = CompetitorAnalysisResponseSchema.parse(result);
 
+        // Insert the analysis data into the database
+        await insertCompetitorAnalysisData({
+          userId: validatedData.user_id,
+          competitorId: validatedData.competitor_id,
+          analysisData: validatedResult
+        });
+
         return {
           success: true,
           data: validatedResult
@@ -133,6 +162,13 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
             return reply.status(400).send({
               success: false,
               error: `Validation error: ${error.message}`
+            });
+          }
+
+          if (error.message.includes("database") || error.message.includes("INSERT") || error.message.includes("relation")) {
+            return reply.status(500).send({
+              success: false,
+              error: "Database error while saving analysis results"
             });
           }
         }

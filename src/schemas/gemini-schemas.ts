@@ -19,12 +19,24 @@ export const LeadItemSchema = z.object({
 });
 
 /**
+ * Schema for alternative information in analysis results
+ */
+export const AlternativeItemSchema = z.object({
+  name: z.string().min(1).max(100),
+  evidence_ids: z.array(z.string()).max(10),
+  platform: z.string().min(1).max(50),
+  mention_context: z.string().min(1).max(200).optional(),
+  confidence_score: z.number().min(0).max(1).optional()
+});
+
+/**
  * Schema for competitor analysis response
  */
 export const CompetitorAnalysisResponseSchema = z.object({
   features: z.array(EvidenceItemSchema).max(5),
   complaints: z.array(EvidenceItemSchema).max(5),
-  leads: z.array(LeadItemSchema).max(5)
+  leads: z.array(LeadItemSchema).max(5),
+  alternatives: z.array(AlternativeItemSchema).max(5)
 });
 
 /**
@@ -44,7 +56,9 @@ export const TextGenerationResponseSchema = z.object({
  */
 export const CompetitorAnalysisRequestSchema = z.object({
   dataset: z.array(z.any()).min(1).max(1000),
-  prompt: z.string().max(2000).optional()
+  prompt: z.string().max(2000).optional(),
+  user_id: z.string().min(1),
+  competitor_id: z.string().min(1).optional()
 });
 
 /**
@@ -70,6 +84,7 @@ export const GeminiApiRequestSchema = z.object({
  */
 export type EvidenceItem = z.infer<typeof EvidenceItemSchema>;
 export type LeadItem = z.infer<typeof LeadItemSchema>;
+export type AlternativeItem = z.infer<typeof AlternativeItemSchema>;
 export type CompetitorAnalysisResponse = z.infer<typeof CompetitorAnalysisResponseSchema>;
 export type TextGenerationResponse = z.infer<typeof TextGenerationResponseSchema>;
 export type CompetitorAnalysisRequest = z.infer<typeof CompetitorAnalysisRequestSchema>;
