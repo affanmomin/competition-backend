@@ -11,16 +11,33 @@ export interface GeminiAnalysisResponse {
   features: Array<{
     canonical: string;
     evidence_ids: string[];
+    feature_type?: string;
+    impact_level?: string;
+    confidence_score?: number;
   }>;
   complaints: Array<{
     canonical: string;
     evidence_ids: string[];
+    category?: string;
+    severity?: string;
+    sentiment_score?: number;
+    confidence_score?: number;
   }>;
   leads: Array<{
     username: string;
     platform: string;
     excerpt: string;
     reason: string;
+    lead_type?: string;
+    urgency?: string;
+    confidence_score?: number;
+  }>;
+  alternatives: Array<{
+    name: string;
+    evidence_ids: string[];
+    platform: string;
+    mention_context?: string;
+    confidence_score?: number;
   }>;
 }
 
@@ -49,40 +66,135 @@ export async function analyzeCompetitorData(request: GeminiAnalysisRequest): Pro
     throw new Error("GEMINI_API_KEY environment variable is required");
   }
 
-  const defaultPrompt = `You are an analysis engine for competitor research.
-Your job is to analyze social media posts and comments about competitors and extract ONLY structured insights.
-STRICTLY follow these rules:
+  const defaultPrompt = `# You are a precision analysis engine for competitor research. Your task is to extract ONLY high-value, structured insights from social media posts with maximum efficiency.
 
-### 🎯 Categories
-Classify extracted information into THREE categories only:
-1. **features** → competitor feature announcements, launches, new capabilities.
-2. **complaints** → user pain points, frustrations, bugs, missing features, poor service.
-3. **leads** → posts/comments that show switching intent (looking for alternatives, leaving competitor, asking what else to use).
+## 🎯 Analysis Categories (Extract ONLY these 4)
 
-### 📋 Output Schema
-You must return a single JSON object in this exact shape:
+### 1. **FEATURES** 
+Product announcements, launches, updates, new capabilities, integrations, or deprecations.
+
+### 2. **COMPLAINTS**
+User pain points, bugs, service issues, missing features, pricing concerns, or performance problems.
+
+### 3. **LEADS** 
+Clear switching intent: Users expressing frustration, dissatisfaction, or actively seeking alternatives to the competitor.
+
+### 4. **ALTERNATIVES**
+Clear switching intent: direct mentions of possible competitor alternatives, recommendations, comparisons, or substitute products/services being suggested.
+
+## 📋 Required JSON Output Schema
+
+\`\`\`json
 {
   "features": [
-    { "canonical": string, "evidence_ids": [string] }
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "feature_type": "new|update|integration|beta|deprecated",
+      "impact_level": "minor|major|breaking",
+      "confidence_score": 0.0-1.0
+    }
   ],
   "complaints": [
-    { "canonical": string, "evidence_ids": [string] }
+    {
+      "canonical": "string (max 60 chars)", 
+      "evidence_ids": ["string"],
+      "category": "performance|ui_ux|pricing|support|features|bugs|other",
+      "severity": "low|medium|high|critical",
+      "sentiment_score": -1.0 to 1.0,
+      "confidence_score": 0.0-1.0
+    }
   ],
   "leads": [
-    { "username": string, "platform": string, "excerpt": string, "reason": string }
+    {
+      "username": "string",
+      "platform": "string", 
+      "excerpt": "string (max 200 chars)",
+      "reason": "string (max 100 chars)",
+      "lead_type": "switching|evaluating|dissatisfied|researching",
+      "urgency": "low|medium|high|immediate",
+      "confidence_score": 0.0-1.0
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "string (max 50 chars)",
+      "evidence_ids": ["string"],
+      "platform": "string",
+      "mention_context": "recommendation|comparison|replacement|evaluation",
+      "confidence_score": 0.0-1.0
+    }
   ]
 }
+\`\`\`
 
-### 🔒 Hard Rules
-- NO prose, NO markdown, NO explanations — ONLY the JSON object.
-- Maximum 5 items per section.
-- Use evidence_ids from the provided post_id or comment_id fields (never invent).
-- Canonical text should be short, generalizable phrases (e.g., "Shadowbans on creators" not "user123 says they are shadowbanned today").
-- If a category has no items, return an empty array [].
-- Do not hallucinate data or invent user intent — extract only what is present.
+## 🚨 CRITICAL ANTI-HALLUCINATION RULES
 
-### 📦 Dataset
-Analyze the following dataset of competitor posts and comments:`;
+**ZERO TOLERANCE FOR FABRICATION:**
+- **NEVER** create or invent evidence_ids that don't exist in the dataset
+- **NEVER** extract insights from posts that weren't provided in the dataset  
+- **NEVER** combine information from multiple posts into a single insight
+- **NEVER** assume or infer information not explicitly stated in the text
+- **NEVER** create usernames, platforms, or excerpts that don't exist in the source data
+
+**STRICT DATA VALIDATION:**
+- Every \`evidence_id\` MUST correspond to an actual \`post_id\` or \`comment_id\` from the dataset
+- Every \`username\` MUST be copied exactly from the source post (no modifications)
+- Every \`platform\` MUST match the platform specified in the source data
+- Every \`excerpt\` MUST be a direct quote from the original post (max 200 chars)
+- All \`canonical\` text MUST be derived only from content actually present in the posts
+
+**VERIFICATION REQUIREMENTS:**
+- Before adding any insight, verify the evidence_id exists in the provided dataset
+- Before extracting any feature, verify it's explicitly mentioned as a product update/launch
+- Before classifying a complaint, verify the user actually expressed dissatisfaction
+- Before identifying a lead, verify clear switching intent is stated in the text
+- Before listing an alternative, verify a specific product/service name is mentioned
+
+**CONFIDENCE SCORING INTEGRITY:**
+- Set confidence_score < 0.6 if ANY doubt exists about the classification
+- Set confidence_score = 0.0 if you cannot find direct evidence in the text
+- **DO NOT** boost confidence scores to meet the 0.6 threshold requirement
+- **EXCLUDE** any insight with confidence_score < 0.6 from the final output
+
+## 🔒 Strict Processing Rules
+
+**EFFICIENCY FIRST:**
+- Process posts in order of relevance (complaints > leads > alternatives > features)
+- Stop processing if you hit 5 items in each category
+- Skip obvious spam, promotional, or irrelevant content
+- Only extract insights with confidence_score ≥ 0.6
+
+**QUALITY CONTROLS:**
+- \`canonical\` text must be generalizable, not user-specific
+- \`evidence_ids\` must match exactly from dataset (never fabricate)
+- \`confidence_score\` reflects certainty of classification (0.6-1.0 range)
+- \`sentiment_score\` only for complaints (-1.0 negative to 1.0 positive)
+
+**OUTPUT CONSTRAINTS:**
+- Return ONLY the JSON object (no explanations, markdown, or prose)
+- Maximum 5 items per category (features, complaints, leads, alternatives)
+- Empty arrays \`[]\` if no valid items found
+- All text fields must be concise and actionable
+
+**DATASET FIDELITY:**
+- **ONLY** analyze posts and comments provided in the dataset section
+- **NEVER** reference external knowledge about companies or products
+- **NEVER** make assumptions about what users "probably meant"
+- **IF UNSURE** about any classification, exclude it rather than guess
+
+## 🚨 Cost Optimization Instructions
+
+- **IGNORE** duplicate or near-duplicate insights across all categories
+- **PRIORITIZE** high-impact items (critical complaints, major features, immediate leads, frequently mentioned alternatives)
+- **SKIP** vague posts without clear actionable insights
+- **CONSOLIDATE** similar items under one canonical phrase
+- **ALTERNATIVES**: Focus on specific product names, not generic terms like "other tools"
+- **ABORT PROCESSING** any post that lacks clear evidence for categorization
+
+## 📦 Dataset Analysis
+
+Process the following competitor posts and comments:`;
 
   const prompt = request.prompt || defaultPrompt;
   const datasetMinified = JSON.stringify(request.dataset);

@@ -22,13 +22,6 @@ interface DeleteCompetitorBody {
 }
 
 export default async function competitorsRoutes(fastify: FastifyInstance) {
-  // Ensure database connection
-  try {
-    await client.connect();
-  } catch (error) {
-    // Connection might already exist, ignore connection errors
-    console.log('Database connection attempt:', error);
-  }
 
   // Add competitor
   fastify.post<{ Body: CompetitorBody }>('/api/competitors', async (request: FastifyRequest<{ Body: CompetitorBody }>, reply: FastifyReply) => {
