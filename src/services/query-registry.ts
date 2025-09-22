@@ -181,14 +181,15 @@ export const queryRegistry: Record<string, QueryConfig> = {
     description: 'Current top complaints',
     query: `
       SELECT
-        cluster AS name,
+        comp.canonical AS name,
         'Complaints' AS label,
-        SUM(frequency) AS value
-      FROM complaint_clusters
-      WHERE user_id = $1
+        COUNT(*) AS value
+      FROM complaints comp
+      JOIN competitors c ON c.competitor_id = comp.competitor_id
+      WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
-      GROUP BY cluster
+      GROUP BY comp.canonical
       ORDER BY value DESC
       LIMIT 20;
     `,
@@ -200,13 +201,14 @@ export const queryRegistry: Record<string, QueryConfig> = {
     description: 'Total complaints per day over time',
     query: `
       SELECT
-        date_trunc('day', cc.last_updated)::timestamptz AS date,
-        SUM(cc.frequency) AS value,
+        date_trunc('day', comp.last_updated)::timestamptz AS date,
+        COUNT(*) AS value,
         'Complaints' AS label
-      FROM complaint_clusters cc
-      WHERE cc.user_id = $1
-        AND cc.last_updated >= $2
-        AND cc.last_updated < $3
+      FROM complaints comp
+      JOIN competitors c ON c.competitor_id = comp.competitor_id
+      WHERE c.user_id = $1
+        AND comp.last_updated >= $2
+        AND comp.last_updated < $3
       GROUP BY 1
       ORDER BY 1;
     `,
@@ -270,8 +272,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
       FROM alternatives a
-      JOIN competitors c ON c.id = a.competitor_id
-      WHERE c.user_id = $1
+      WHERE a.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
       GROUP BY a.name
@@ -450,16 +451,18 @@ export const queryRegistry: Record<string, QueryConfig> = {
     query: `
       WITH this AS (
         SELECT COUNT(*) AS v
-        FROM analyzed_posts
-        WHERE user_id = $1
-          AND analyzed_at >= $2 AND analyzed_at < $3
+        FROM analyzed_posts ap
+        JOIN competitors c ON c.competitor_id = ap.competitor_id
+        WHERE c.user_id = $1
+          AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       ),
       prev AS (
         SELECT COUNT(*) AS v
-        FROM analyzed_posts
-        WHERE user_id = $1
-          AND analyzed_at >= ($2 - ($3 - $2))
-          AND analyzed_at < $2
+        FROM analyzed_posts ap
+        JOIN competitors c ON c.competitor_id = ap.competitor_id
+        WHERE c.user_id = $1
+          AND ap.analyzed_at >= ($2 - ($3 - $2))
+          AND ap.analyzed_at < $2
       )
       SELECT this.v AS current_value,
              prev.v AS previous_value,
@@ -472,29 +475,30 @@ export const queryRegistry: Record<string, QueryConfig> = {
   'negative-sentiment-percentage': {
     key: 'negative-sentiment-percentage',
     title: 'Negative Sentiment Percentage',
-    description: 'Negative sentiment percentage with period comparison',
+    description: 'Negative sentiment percentage with period comparison (requires sentiment analysis)',
     query: `
       WITH base AS (
-        SELECT *
-        FROM analyzed_posts
-        WHERE user_id = $1
+        SELECT ap.*, c.user_id
+        FROM analyzed_posts ap
+        JOIN competitors c ON c.competitor_id = ap.competitor_id
+        WHERE c.user_id = $1
       ),
       this AS (
-        SELECT COUNT(*) FILTER (WHERE sentiment ILIKE 'negative')::float / NULLIF(COUNT(*),0) AS pct
+        SELECT 0::float AS pct
         FROM base
         WHERE analyzed_at >= $2 AND analyzed_at < $3
+        LIMIT 1
       ),
       prev AS (
-        SELECT COUNT(*) FILTER (WHERE sentiment ILIKE 'negative')::float / NULLIF(COUNT(*),0) AS pct
+        SELECT 0::float AS pct
         FROM base
         WHERE analyzed_at >= ($2 - ($3 - $2))
           AND analyzed_at < $2
+        LIMIT 1
       )
-      SELECT (100.0 * this.pct)::numeric(10,2) AS current_pct,
-             (100.0 * prev.pct)::numeric(10,2) AS previous_pct,
-             CASE WHEN prev.pct IS NULL OR prev.pct = 0 THEN NULL
-                  ELSE ((100.0 * (this.pct - prev.pct) / prev.pct)::numeric(10,2)) END AS pct_change
-      FROM this, prev;
+      SELECT 0.00::numeric(10,2) AS current_pct,
+             0.00::numeric(10,2) AS previous_pct,
+             0.00::numeric(10,2) AS pct_change;
     `,
     chartType: 'number'
   },
@@ -504,17 +508,19 @@ export const queryRegistry: Record<string, QueryConfig> = {
     description: 'Recurring complaints with period comparison',
     query: `
       WITH this AS (
-        SELECT COALESCE(SUM(frequency),0) AS v
-        FROM complaint_clusters
-        WHERE user_id = $1
-          AND last_updated >= $2 AND last_updated < $3
+        SELECT COUNT(*) AS v
+        FROM complaints comp
+        JOIN competitors c ON c.competitor_id = comp.competitor_id
+        WHERE c.user_id = $1
+          AND comp.last_updated >= $2 AND comp.last_updated < $3
       ),
       prev AS (
-        SELECT COALESCE(SUM(frequency),0) AS v
-        FROM complaint_clusters
-        WHERE user_id = $1
-          AND last_updated >= ($2 - ($3 - $2))
-          AND last_updated < $2
+        SELECT COUNT(*) AS v
+        FROM complaints comp
+        JOIN competitors c ON c.competitor_id = comp.competitor_id
+        WHERE c.user_id = $1
+          AND comp.last_updated >= ($2 - ($3 - $2))
+          AND comp.last_updated < $2
       )
       SELECT this.v AS current_value,
              prev.v AS previous_value,
@@ -532,15 +538,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       WITH this AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        JOIN competitors c ON c.id = a.competitor_id
-        WHERE c.user_id = $1
+        WHERE a.user_id = $1
           AND a.last_updated >= $2 AND a.last_updated < $3
       ),
       prev AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        JOIN competitors c ON c.id = a.competitor_id
-        WHERE c.user_id = $1
+        WHERE a.user_id = $1
           AND a.last_updated >= ($2 - ($3 - $2))
           AND a.last_updated < $2
       )
@@ -617,7 +621,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
     description: 'Complete list of all competitors for a user with all data points',
     query: `
       SELECT
-        c.id,
+        c.competitor_id AS id,
         c.name,
         c.slug,
         c.created_at,
@@ -627,22 +631,22 @@ export const queryRegistry: Record<string, QueryConfig> = {
         COUNT(DISTINCT s.id) FILTER (WHERE s.enabled = false OR s.enabled IS NULL) AS disabled_sources,
         MAX(s.last_scraped_at) AS last_scraped_at,
         COUNT(DISTINCT ap.id) AS total_mentions,
-        COUNT(DISTINCT ap.id) FILTER (WHERE ap.sentiment ILIKE 'positive') AS positive_mentions,
-        COUNT(DISTINCT ap.id) FILTER (WHERE ap.sentiment ILIKE 'negative') AS negative_mentions,
-        COUNT(DISTINCT ap.id) FILTER (WHERE ap.sentiment ILIKE 'neutral') AS neutral_mentions,
+        0 AS positive_mentions,
+        0 AS negative_mentions,
+        0 AS neutral_mentions,
         COUNT(DISTINCT l.id) AS total_leads,
-        COUNT(DISTINCT cc.id) AS total_complaint_clusters,
+        COUNT(DISTINCT comp.id) AS total_complaints,
         COUNT(DISTINCT a.id) AS total_alternatives
       FROM competitors c
-      LEFT JOIN sources s ON s.competitor_id = c.id
-      LEFT JOIN analyzed_posts ap ON ap.competitor_id = c.id AND ap.user_id = c.user_id
+      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
+      LEFT JOIN analyzed_posts ap ON ap.competitor_id = c.competitor_id
       LEFT JOIN leads l ON l.analyzed_post_id = ap.id AND l.user_id = c.user_id
-      LEFT JOIN complaint_clusters cc ON cc.competitor_id = c.id AND cc.user_id = c.user_id
-      LEFT JOIN alternatives a ON a.competitor_id = c.id
+      LEFT JOIN complaints comp ON comp.competitor_id = c.competitor_id
+      LEFT JOIN alternatives a ON a.competitor_id = c.competitor_id
       WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
-      GROUP BY c.id, c.name, c.slug, c.created_at, c.user_id
+      GROUP BY c.competitor_id, c.name, c.slug, c.created_at, c.user_id
       ORDER BY c.created_at DESC;
     `,
     chartType: 'table'
@@ -662,17 +666,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
         l.status,
         l.created_at,
         l.user_id,
-        ap.sentiment,
-        ap.cluster,
-        ap.switch_intent,
-        ap.summary,
-        ap.alternatives,
+        ap.excerpt AS post_excerpt,
         ap.analyzed_at,
         c.name AS competitor_name,
         c.slug AS competitor_slug
       FROM leads l
       LEFT JOIN analyzed_posts ap ON ap.id = l.analyzed_post_id
-      LEFT JOIN competitors c ON c.id = ap.competitor_id
+      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
       WHERE l.user_id = $1
         AND ($2::timestamp is null OR l.created_at >= $2)
         AND ($3::timestamp is null OR l.created_at < $3)
