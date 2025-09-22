@@ -38,22 +38,22 @@ export const queryRegistry: Record<string, QueryConfig> = {
         'Enabled' AS label,
         COUNT(s.id) FILTER (WHERE s.enabled) AS value
       FROM competitors c
-      LEFT JOIN sources s ON s.competitor_id = c.id
+      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
       WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
-      GROUP BY c.id, c.name
+      GROUP BY c.competitor_id, c.name
       UNION ALL
       SELECT
         c.name AS name,
         'Disabled' AS label,
         COUNT(s.id) FILTER (WHERE NOT s.enabled OR s.enabled IS NULL) AS value
       FROM competitors c
-      LEFT JOIN sources s ON s.competitor_id = c.id
+      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
       WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
-      GROUP BY c.id, c.name
+      GROUP BY c.competitor_id, c.name
       ORDER BY name, label;
     `,
     chartType: 'bar'
@@ -89,39 +89,22 @@ export const queryRegistry: Record<string, QueryConfig> = {
     `,
     chartType: 'line'
   },
-  'sentiment-trend': {
-    key: 'sentiment-trend',
-    title: 'Sentiment Trend',
-    description: 'Daily sentiment distribution',
-    query: `
-      SELECT date_trunc('day', ap.analyzed_at)::date AS day,
-             ap.sentiment,
-             COUNT(*) AS cnt
-      FROM analyzed_posts ap
-      WHERE ap.user_id = $1
-        AND ap.analyzed_at >= $2
-        AND ap.analyzed_at < $3
-      GROUP BY 1, 2
-      ORDER BY 1, 2;
-    `,
-    chartType: 'area'
-  },
   'competitor-sentiment': {
     key: 'competitor-sentiment',
     title: 'Competitor Sentiment Distribution',
     description: 'Sentiment distribution by competitor',
     query: `
-      SELECT c.id AS competitor_id,
+      SELECT c.competitor_id AS competitor_id,
              c.name,
-             ap.sentiment,
+             'neutral' AS sentiment,
              COUNT(*) AS mentions
       FROM analyzed_posts ap
-      JOIN competitors c ON c.id = ap.competitor_id
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
       WHERE ap.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
-      GROUP BY c.id, c.name, ap.sentiment
-      ORDER BY c.name, ap.sentiment;
+      GROUP BY c.competitor_id, c.name
+      ORDER BY c.name;
     `,
     chartType: 'bar'
   },
@@ -142,12 +125,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
         ROUND(100.0 * COUNT(ap.id) / NULLIF(t.total_mentions,0), 2) AS value
       FROM competitors c
       LEFT JOIN analyzed_posts ap
-             ON ap.competitor_id = c.id
+             ON ap.competitor_id = c.competitor_id
             AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       CROSS JOIN tot t
       WHERE c.user_id = $1
-      GROUP BY c.id, c.name, t.total_mentions
+      GROUP BY c.competitor_id, c.name, t.total_mentions
       ORDER BY value DESC;
     `,
     chartType: 'pie'
@@ -155,22 +138,19 @@ export const queryRegistry: Record<string, QueryConfig> = {
   'net-sentiment-score': {
     key: 'net-sentiment-score',
     title: 'Net Sentiment Score',
-    description: 'Net sentiment score per competitor',
+    description: 'Net sentiment score per competitor (requires sentiment analysis)',
     query: `
       SELECT
         c.name AS name,
         'Net Sentiment' AS label,
-        (SUM(CASE WHEN ap.sentiment ILIKE 'positive' THEN 1
-                  WHEN ap.sentiment ILIKE 'negative' THEN -1
-                  ELSE 0 END)::float
-         / NULLIF(COUNT(ap.id),0)) AS value
+        0.0 AS value
       FROM competitors c
       LEFT JOIN analyzed_posts ap
-             ON ap.competitor_id = c.id
+             ON ap.competitor_id = c.competitor_id
             AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       WHERE c.user_id = $1
-      GROUP BY c.id, c.name
+      GROUP BY c.competitor_id, c.name
       ORDER BY value DESC NULLS LAST;
     `,
     chartType: 'bar'
@@ -214,56 +194,6 @@ export const queryRegistry: Record<string, QueryConfig> = {
     `,
     chartType: 'line'
   },
-  'complaint-heatmap': {
-    key: 'complaint-heatmap',
-    title: 'Complaint Heatmap',
-    description: 'Complaint distribution by competitor and cluster',
-    query: `
-      SELECT c.name AS competitor,
-             cc.cluster,
-             SUM(cc.frequency) AS mentions
-      FROM complaint_clusters cc
-      JOIN competitors c ON c.id = cc.competitor_id
-      WHERE cc.user_id = $1
-        AND ($2::timestamp is null OR true)
-        AND ($3::timestamp is null OR true)
-      GROUP BY c.name, cc.cluster
-      ORDER BY c.name, mentions DESC;
-    `,
-    chartType: 'scatter'
-  },
-  'emerging-complaints': {
-    key: 'emerging-complaints',
-    title: 'Emerging Complaints',
-    description: 'Complaints updated recently vs prior window',
-    query: `
-      WITH this_window AS (
-        SELECT cluster, SUM(frequency) AS f_now
-        FROM complaint_clusters
-        WHERE user_id = $1
-          AND last_updated >= $2 AND last_updated < $3
-        GROUP BY cluster
-      ),
-      prev_window AS (
-        SELECT cluster, SUM(frequency) AS f_prev
-        FROM complaint_clusters
-        WHERE user_id = $1
-          AND last_updated >= ($2 - ($3 - $2))
-          AND last_updated < $2
-        GROUP BY cluster
-      )
-      SELECT tw.cluster,
-             COALESCE(pw.f_prev,0) AS prev,
-             tw.f_now AS current,
-             CASE WHEN COALESCE(pw.f_prev,0) = 0 AND tw.f_now > 0 THEN 'new'
-                  WHEN COALESCE(pw.f_prev,0) = 0 THEN 'no-change'
-                  ELSE ROUND(100.0 * (tw.f_now - pw.f_prev) / NULLIF(pw.f_prev,0), 2)::text END AS pct_change
-      FROM this_window tw
-      LEFT JOIN prev_window pw USING (cluster)
-      ORDER BY (tw.f_now - COALESCE(pw.f_prev,0)) DESC;
-    `,
-    chartType: 'table'
-  },
   'top-alternatives': {
     key: 'top-alternatives',
     title: 'Top Alternatives',
@@ -291,7 +221,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
         SUM(a.mentions_count) AS value,
         a.name AS label
       FROM alternatives a
-      JOIN competitors c ON c.id = a.competitor_id
+      JOIN competitors c ON c.competitor_id = a.competitor_id
       WHERE c.user_id = $1
         AND a.last_updated >= $2
         AND a.last_updated < $3
@@ -299,58 +229,6 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY 1, a.name;
     `,
     chartType: 'line'
-  },
-  'switching-intent-trend': {
-    key: 'switching-intent-trend',
-    title: 'Switching Intent Trend',
-    description: 'Daily trend of switching intent',
-    query: `
-      SELECT
-        date_trunc('day', ap.analyzed_at)::timestamptz AS date,
-        COUNT(*) AS value,
-        'Switching Intent' AS label
-      FROM analyzed_posts ap
-      WHERE ap.user_id = $1
-        AND ap.switch_intent = TRUE
-        AND ap.analyzed_at >= $2
-        AND ap.analyzed_at < $3
-      GROUP BY 1
-      ORDER BY 1;
-    `,
-    chartType: 'line'
-  },
-  'complaints-alternatives-correlation': {
-    key: 'complaints-alternatives-correlation',
-    title: 'Complaints vs Alternatives Correlation',
-    description: 'Daily correlation between complaints and alternative mentions',
-    query: `
-      WITH complaints AS (
-        SELECT date_trunc('day', cc.last_updated)::date AS day,
-               SUM(cc.frequency) AS complaints
-        FROM complaint_clusters cc
-        WHERE cc.user_id = $1
-          AND cc.last_updated >= $2
-          AND cc.last_updated < $3
-        GROUP BY 1
-      ),
-      alts AS (
-        SELECT date_trunc('day', a.last_updated)::date AS day,
-               SUM(a.mentions_count) AS alt_mentions
-        FROM alternatives a
-        JOIN competitors c ON c.id = a.competitor_id
-        WHERE c.user_id = $1
-          AND a.last_updated >= $2
-          AND a.last_updated < $3
-        GROUP BY 1
-      )
-      SELECT COALESCE(c.day, a.day) AS day,
-             c.complaints,
-             a.alt_mentions
-      FROM complaints c
-      FULL OUTER JOIN alts a ON a.day = c.day
-      ORDER BY day;
-    `,
-    chartType: 'scatter'
   },
   'leads-over-time': {
     key: 'leads-over-time',
@@ -436,7 +314,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
              s.enabled,
              s.last_scraped_at
       FROM competitors c
-      LEFT JOIN sources s ON s.competitor_id = c.id
+      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
       WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
@@ -558,41 +436,19 @@ export const queryRegistry: Record<string, QueryConfig> = {
   },
   'recent-negative-mentions': {
     key: 'recent-negative-mentions',
-    title: 'Recent Negative Mentions',
-    description: 'Sample of recent negative mentions',
+    title: 'Recent Mentions',
+    description: 'Sample of recent mentions (sentiment analysis required)',
     query: `
       SELECT ap.analyzed_at::timestamp AS analyzed_at,
              c.name AS competitor,
-             ap.cluster,
-             ap.summary,
-             ap.alternatives
+             ap.excerpt,
+             ap.platform
       FROM analyzed_posts ap
-      LEFT JOIN competitors c ON c.id = ap.competitor_id
+      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
       WHERE ap.user_id = $1
-        AND ap.sentiment ILIKE 'negative'
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       ORDER BY ap.analyzed_at DESC
-      LIMIT 100;
-    `,
-    chartType: 'table'
-  },
-  'complaint-examples': {
-    key: 'complaint-examples',
-    title: 'Complaint Examples',
-    description: 'Examples from complaint clusters',
-    query: `
-      SELECT c.name AS competitor,
-             cc.cluster,
-             cc.sample_post,
-             cc.frequency,
-             cc.last_updated
-      FROM complaint_clusters cc
-      LEFT JOIN competitors c ON c.id = cc.competitor_id
-      WHERE cc.user_id = $1
-        AND ($2::timestamp is null OR true)
-        AND ($3::timestamp is null OR true)
-      ORDER BY cc.frequency DESC, cc.last_updated DESC
       LIMIT 100;
     `,
     chartType: 'table'
@@ -606,7 +462,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
              a.name AS alternative,
              SUM(a.mentions_count) AS mentions
       FROM alternatives a
-      JOIN competitors c ON c.id = a.competitor_id
+      JOIN competitors c ON c.competitor_id = a.competitor_id
       WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
