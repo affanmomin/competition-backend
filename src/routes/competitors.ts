@@ -58,7 +58,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
         const competitorResult = await client.query(competitorQuery, [name, slug, user_id]);
         const competitor = competitorResult.rows[0];
 
-        // Insert competitor_sources if source_ids are provided
+        if (source_ids && source_ids.length > 0) {
           for (const source_id of source_ids) {
             const sourceQuery = `
               INSERT INTO public.competitor_sources (competitor_id, source_id)
@@ -66,9 +66,11 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             `;
             await client.query(sourceQuery, [competitor.competitor_id, source_id]);
           }
-
+        }
         // Commit transaction
         await client.query('COMMIT');
+
+        
 
         return reply.code(201).send({
           success: true,
@@ -76,7 +78,6 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
         });
 
       } catch (transactionError) {
-        // Rollback transaction on error
         await client.query('ROLLBACK');
         throw transactionError;
       }
