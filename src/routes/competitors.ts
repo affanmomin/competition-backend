@@ -5,6 +5,7 @@ interface CompetitorBody {
   name: string;
   slug: string;
   user_id: string;
+  source_ids?: string[]; // Array of source UUIDs to link to this competitor
 }
 
 interface CompetitorQuery {
@@ -22,13 +23,6 @@ interface DeleteCompetitorBody {
 }
 
 export default async function competitorsRoutes(fastify: FastifyInstance) {
-  // Ensure database connection
-  try {
-    await client.connect();
-  } catch (error) {
-    // Connection might already exist, ignore connection errors
-    console.log('Database connection attempt:', error);
-  }
 
   // Add competitor
   fastify.post<{ Body: CompetitorBody }>('/api/competitors', async (request: FastifyRequest<{ Body: CompetitorBody }>, reply: FastifyReply) => {
@@ -164,7 +158,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
       const { id } = request.params;
       const { user_id } = request.body || {};
 
-      let query = 'DELETE FROM public.competitors WHERE id = $1';
+      let query = 'DELETE FROM public.competitors WHERE competitor_id = $1';
       const params: any[] = [id];
 
       // If user_id is provided, ensure user can only delete their own competitors

@@ -1,38 +1,31 @@
-import { z } from 'zod';
-
-/**
- * Type for query metadata and configuration
- */
-export interface QueryConfig {
-  key: string;
-  title: string;
-  description: string;
-  query: string;
-  chartType: 'line' | 'bar' | 'pie' | 'area' | 'scatter' | 'number' | 'table';
-}
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.QueryParamsSchema = exports.queryRegistry = void 0;
+exports.getQueryConfig = getQueryConfig;
+exports.getAllQueryKeys = getAllQueryKeys;
+const zod_1 = require("zod");
 /**
  * Registry of all available queries
  */
-export const queryRegistry: Record<string, QueryConfig> = {
-  'active-competitors': {
-    key: 'active-competitors',
-    title: 'Active Competitors',
-    description: 'Number of active competitors being tracked',
-    query: `
+exports.queryRegistry = {
+    'active-competitors': {
+        key: 'active-competitors',
+        title: 'Active Competitors',
+        description: 'Number of active competitors being tracked',
+        query: `
       SELECT COUNT(*) AS active_competitors
       FROM competitors
       WHERE user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true);
     `,
-    chartType: 'number'
-  },
-  'sources-coverage': {
-    key: 'sources-coverage',
-    title: 'Sources Coverage',
-    description: 'Enabled vs disabled sources by competitor',
-    query: `
+        chartType: 'number'
+    },
+    'sources-coverage': {
+        key: 'sources-coverage',
+        title: 'Sources Coverage',
+        description: 'Enabled vs disabled sources by competitor',
+        query: `
       SELECT
         c.name AS name,
         'Enabled' AS label,
@@ -56,13 +49,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY name, label;
     `,
-    chartType: 'bar'
-  },
-  'posts-analyzed': {
-    key: 'posts-analyzed',
-    title: 'Posts Analyzed',
-    description: 'Number of posts analyzed in the given period',
-    query: `
+        chartType: 'bar'
+    },
+    'posts-analyzed': {
+        key: 'posts-analyzed',
+        title: 'Posts Analyzed',
+        description: 'Number of posts analyzed in the given period',
+        query: `
       SELECT COUNT(*) AS posts_analyzed
       FROM analyzed_posts ap
       JOIN competitors c ON c.competitor_id = ap.competitor_id
@@ -70,13 +63,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3;
     `,
-    chartType: 'number'
-  },
-  'mentions-trend': {
-    key: 'mentions-trend',
-    title: 'Mentions Trend',
-    description: 'Daily trend of mentions',
-    query: `
+        chartType: 'number'
+    },
+    'mentions-trend': {
+        key: 'mentions-trend',
+        title: 'Mentions Trend',
+        description: 'Daily trend of mentions',
+        query: `
       SELECT
         date_trunc('day', ap.analyzed_at)::timestamptz AS date,
         COUNT(*) AS value,
@@ -89,13 +82,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
-  },
-  'competitor-sentiment': {
-    key: 'competitor-sentiment',
-    title: 'Competitor Sentiment Distribution',
-    description: 'Sentiment distribution by competitor',
-    query: `
+        chartType: 'line'
+    },
+    'competitor-sentiment': {
+        key: 'competitor-sentiment',
+        title: 'Competitor Sentiment Distribution',
+        description: 'Sentiment distribution by competitor',
+        query: `
       SELECT c.competitor_id AS competitor_id,
              c.name,
              'neutral' AS sentiment,
@@ -108,13 +101,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY c.name;
     `,
-    chartType: 'bar'
-  },
-  'share-of-voice': {
-    key: 'share-of-voice',
-    title: 'Share of Voice',
-    description: 'Mentions by competitor',
-    query: `
+        chartType: 'bar'
+    },
+    'share-of-voice': {
+        key: 'share-of-voice',
+        title: 'Share of Voice',
+        description: 'Mentions by competitor',
+        query: `
       WITH tot AS (
         SELECT COUNT(*) AS total_mentions
         FROM analyzed_posts ap
@@ -135,13 +128,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name, t.total_mentions
       ORDER BY value DESC;
     `,
-    chartType: 'pie'
-  },
-  'net-sentiment-score': {
-    key: 'net-sentiment-score',
-    title: 'Net Sentiment Score',
-    description: 'Net sentiment score per competitor (requires sentiment analysis)',
-    query: `
+        chartType: 'pie'
+    },
+    'net-sentiment-score': {
+        key: 'net-sentiment-score',
+        title: 'Net Sentiment Score',
+        description: 'Net sentiment score per competitor (requires sentiment analysis)',
+        query: `
       SELECT
         c.name AS name,
         'Net Sentiment' AS label,
@@ -154,13 +147,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY value DESC NULLS LAST;
     `,
-    chartType: 'bar'
-  },
-  'top-complaints': {
-    key: 'top-complaints',
-    title: 'Top Complaints',
-    description: 'Current top complaints',
-    query: `
+        chartType: 'bar'
+    },
+    'top-complaints': {
+        key: 'top-complaints',
+        title: 'Top Complaints',
+        description: 'Current top complaints',
+        query: `
       SELECT
         comp.canonical AS name,
         'Complaints' AS label,
@@ -174,13 +167,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY value DESC
       LIMIT 20;
     `,
-    chartType: 'bar'
-  },
-  'complaint-trend': {
-    key: 'complaint-trend',
-    title: 'Complaint Trend',
-    description: 'Total complaints per day over time',
-    query: `
+        chartType: 'bar'
+    },
+    'complaint-trend': {
+        key: 'complaint-trend',
+        title: 'Complaint Trend',
+        description: 'Total complaints per day over time',
+        query: `
       SELECT
         date_trunc('day', comp.last_updated)::timestamptz AS date,
         COUNT(*) AS value,
@@ -193,13 +186,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
-  },
-  'top-alternatives': {
-    key: 'top-alternatives',
-    title: 'Top Alternatives',
-    description: 'Current top alternatives',
-    query: `
+        chartType: 'line'
+    },
+    'top-alternatives': {
+        key: 'top-alternatives',
+        title: 'Top Alternatives',
+        description: 'Current top alternatives',
+        query: `
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
       FROM alternatives a
@@ -211,13 +204,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY mentions DESC
       LIMIT 20;
     `,
-    chartType: 'bar'
-  },
-  'alternatives-trend': {
-    key: 'alternatives-trend',
-    title: 'Alternatives Trend',
-    description: 'Alternatives trend by day',
-    query: `
+        chartType: 'bar'
+    },
+    'alternatives-trend': {
+        key: 'alternatives-trend',
+        title: 'Alternatives Trend',
+        description: 'Alternatives trend by day',
+        query: `
       SELECT
         date_trunc('day', a.last_updated)::timestamptz AS date,
         SUM(a.mentions_count) AS value,
@@ -230,13 +223,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1, a.name
       ORDER BY 1, a.name;
     `,
-    chartType: 'line'
-  },
-  'leads-over-time': {
-    key: 'leads-over-time',
-    title: 'Leads Over Time',
-    description: 'Daily trend of leads',
-    query: `
+        chartType: 'line'
+    },
+    'leads-over-time': {
+        key: 'leads-over-time',
+        title: 'Leads Over Time',
+        description: 'Daily trend of leads',
+        query: `
       SELECT
         date_trunc('day', l.created_at)::timestamptz AS date,
         COUNT(*) AS value,
@@ -248,13 +241,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
-  },
-  'lead-status-funnel': {
-    key: 'lead-status-funnel',
-    title: 'Lead Status Funnel',
-    description: 'Current lead status distribution',
-    query: `
+        chartType: 'line'
+    },
+    'lead-status-funnel': {
+        key: 'lead-status-funnel',
+        title: 'Lead Status Funnel',
+        description: 'Current lead status distribution',
+        query: `
       SELECT
         l.status AS name,
         'Leads' AS label,
@@ -266,13 +259,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY l.status
       ORDER BY value DESC;
     `,
-    chartType: 'bar'
-  },
-  'lead-source-breakdown': {
-    key: 'lead-source-breakdown',
-    title: 'Lead Source Breakdown',
-    description: 'Lead distribution by platform',
-    query: `
+        chartType: 'bar'
+    },
+    'lead-source-breakdown': {
+        key: 'lead-source-breakdown',
+        title: 'Lead Source Breakdown',
+        description: 'Lead distribution by platform',
+        query: `
       SELECT
         l.platform AS name,
         'Leads' AS label,
@@ -284,13 +277,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY l.platform
       ORDER BY value DESC;
     `,
-    chartType: 'pie'
-  },
-  'recent-switching-leads': {
-    key: 'recent-switching-leads',
-    title: 'Recent Switching Leads',
-    description: 'Recent leads with switching intent',
-    query: `
+        chartType: 'pie'
+    },
+    'recent-switching-leads': {
+        key: 'recent-switching-leads',
+        title: 'Recent Switching Leads',
+        description: 'Recent leads with switching intent',
+        query: `
       SELECT l.platform,
              l.username,
              l.excerpt,
@@ -304,13 +297,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY l.created_at DESC
       LIMIT 50;
     `,
-    chartType: 'table'
-  },
-  'last-scraped': {
-    key: 'last-scraped',
-    title: 'Last Scraped',
-    description: 'Last scraped time per competitor and platform',
-    query: `
+        chartType: 'table'
+    },
+    'last-scraped': {
+        key: 'last-scraped',
+        title: 'Last Scraped',
+        description: 'Last scraped time per competitor and platform',
+        query: `
       SELECT c.name AS competitor,
              s.platform,
              s.enabled,
@@ -322,13 +315,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ($3::timestamp is null OR true)
       ORDER BY c.name, s.platform;
     `,
-    chartType: 'table'
-  },
-  'total-mentions': {
-    key: 'total-mentions',
-    title: 'Total Mentions',
-    description: 'Total mentions with period comparison',
-    query: `
+        chartType: 'table'
+    },
+    'total-mentions': {
+        key: 'total-mentions',
+        title: 'Total Mentions',
+        description: 'Total mentions with period comparison',
+        query: `
       WITH this AS (
         SELECT COUNT(*) AS v
         FROM analyzed_posts ap
@@ -350,13 +343,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
-  },
-  'negative-sentiment-percentage': {
-    key: 'negative-sentiment-percentage',
-    title: 'Negative Sentiment Percentage',
-    description: 'Negative sentiment percentage with period comparison (requires sentiment analysis)',
-    query: `
+        chartType: 'number'
+    },
+    'negative-sentiment-percentage': {
+        key: 'negative-sentiment-percentage',
+        title: 'Negative Sentiment Percentage',
+        description: 'Negative sentiment percentage with period comparison (requires sentiment analysis)',
+        query: `
       WITH base AS (
         SELECT ap.*, c.user_id
         FROM analyzed_posts ap
@@ -380,13 +373,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
              0.00::numeric(10,2) AS previous_pct,
              0.00::numeric(10,2) AS pct_change;
     `,
-    chartType: 'number'
-  },
-  'recurring-complaints': {
-    key: 'recurring-complaints',
-    title: 'Recurring Complaints',
-    description: 'Recurring complaints with period comparison',
-    query: `
+        chartType: 'number'
+    },
+    'recurring-complaints': {
+        key: 'recurring-complaints',
+        title: 'Recurring Complaints',
+        description: 'Recurring complaints with period comparison',
+        query: `
       WITH this AS (
         SELECT COUNT(*) AS v
         FROM complaints comp
@@ -408,13 +401,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
-  },
-  'alternatives-mentioned': {
-    key: 'alternatives-mentioned',
-    title: 'Alternatives Mentioned',
-    description: 'Alternatives mentioned with period comparison',
-    query: `
+        chartType: 'number'
+    },
+    'alternatives-mentioned': {
+        key: 'alternatives-mentioned',
+        title: 'Alternatives Mentioned',
+        description: 'Alternatives mentioned with period comparison',
+        query: `
       WITH this AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
@@ -436,13 +429,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
-  },
-  'recent-negative-mentions': {
-    key: 'recent-negative-mentions',
-    title: 'Recent Mentions',
-    description: 'Sample of recent mentions (sentiment analysis required)',
-    query: `
+        chartType: 'number'
+    },
+    'recent-negative-mentions': {
+        key: 'recent-negative-mentions',
+        title: 'Recent Mentions',
+        description: 'Sample of recent mentions (sentiment analysis required)',
+        query: `
       SELECT ap.analyzed_at::timestamp AS analyzed_at,
              c.name AS competitor,
              ap.excerpt,
@@ -455,13 +448,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY ap.analyzed_at DESC
       LIMIT 100;
     `,
-    chartType: 'table'
-  },
-  'alternatives-by-competitor': {
-    key: 'alternatives-by-competitor',
-    title: 'Alternatives by Competitor',
-    description: 'Alternative mentions grouped by competitor',
-    query: `
+        chartType: 'table'
+    },
+    'alternatives-by-competitor': {
+        key: 'alternatives-by-competitor',
+        title: 'Alternatives by Competitor',
+        description: 'Alternative mentions grouped by competitor',
+        query: `
       SELECT c.name AS competitor,
              a.name AS alternative,
              SUM(a.mentions_count) AS mentions
@@ -473,13 +466,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.name, a.name
       ORDER BY c.name, mentions DESC;
     `,
-    chartType: 'table'
-  },
-  'all-competitors': {
-    key: 'all-competitors',
-    title: 'All Competitors',
-    description: 'Complete list of all competitors for a user with all data points',
-    query: `
+        chartType: 'table'
+    },
+    'all-competitors': {
+        key: 'all-competitors',
+        title: 'All Competitors',
+        description: 'Complete list of all competitors for a user with all data points',
+        query: `
       SELECT
         c.competitor_id AS id,
         c.name,
@@ -498,8 +491,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
         COUNT(DISTINCT comp.id) AS total_complaints,
         COUNT(DISTINCT a.id) AS total_alternatives
       FROM competitors c
-      LEFT JOIN competitor_sources cs ON cs.competitor_id = c.competitor_id
-      LEFT JOIN sources s ON s.id = cs.source_id
+      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
       LEFT JOIN analyzed_posts ap ON ap.competitor_id = c.competitor_id
       LEFT JOIN leads l ON l.analyzed_post_id = ap.id AND l.user_id = c.user_id
       LEFT JOIN complaints comp ON comp.competitor_id = c.competitor_id
@@ -510,13 +502,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name, c.slug, c.created_at, c.user_id
       ORDER BY c.created_at DESC;
     `,
-    chartType: 'table'
-  },
-  'all-leads': {
-    key: 'all-leads',
-    title: 'All Leads',
-    description: 'Complete list of all leads for a user with all data points',
-    query: `
+        chartType: 'table'
+    },
+    'all-leads': {
+        key: 'all-leads',
+        title: 'All Leads',
+        description: 'Complete list of all leads for a user with all data points',
+        query: `
       SELECT
         l.id,
         l.analyzed_post_id,
@@ -533,37 +525,32 @@ export const queryRegistry: Record<string, QueryConfig> = {
         c.slug AS competitor_slug
       FROM leads l
       LEFT JOIN analyzed_posts ap ON ap.id = l.analyzed_post_id
-      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id AND c.user_id = l.user_id
+      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
       WHERE l.user_id = $1
         AND ($2::timestamp is null OR l.created_at >= $2)
         AND ($3::timestamp is null OR l.created_at < $3)
       ORDER BY l.created_at DESC;
     `,
-    chartType: 'table'
-  }
+        chartType: 'table'
+    }
 };
-
 /**
  * Zod schema for query parameters
  */
-export const QueryParamsSchema = z.object({
-  user_id: z.string(),
-  start_date: z.string().datetime().optional(),
-  end_date: z.string().datetime().optional(),
+exports.QueryParamsSchema = zod_1.z.object({
+    user_id: zod_1.z.string(),
+    start_date: zod_1.z.string().datetime().optional(),
+    end_date: zod_1.z.string().datetime().optional(),
 });
-
-export type QueryParams = z.infer<typeof QueryParamsSchema>;
-
 /**
  * Get a query config by its key
  */
-export function getQueryConfig(key: string): QueryConfig | undefined {
-  return queryRegistry[key];
+function getQueryConfig(key) {
+    return exports.queryRegistry[key];
 }
-
 /**
  * Get all available query keys
  */
-export function getAllQueryKeys(): string[] {
-  return Object.keys(queryRegistry);
+function getAllQueryKeys() {
+    return Object.keys(exports.queryRegistry);
 }
