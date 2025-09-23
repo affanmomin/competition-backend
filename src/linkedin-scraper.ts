@@ -15,8 +15,6 @@ import { subDays, subWeeks, subMonths, subYears, format as dfFormat } from 'date
 // ----------------- CONFIG -----------------
 const username = "faizan514pathan@gmail.com";
 const password = "jijji.786";
-const pageUrl  = "https://www.linkedin.com/company/clickup-app";
-const companyPostUrl = "https://www.linkedin.com/company/clickup-app/posts";
 const loginUrl = "https://www.linkedin.com/login";
 
 const DEBUG = false;
@@ -28,8 +26,17 @@ const MAX_COMMENTS_PER_POST = 100;  // hard cap per post
 const STORAGE_STATE_PATH = path.resolve(process.cwd(), 'storageState.json'); // <- session file
 
 // ----------------- Derived file names -----------------
-const company_name = pageUrl.replace(/\/+$/, '').split('/').pop()!.replace(/-/g, ' ');
-const companyNameTitle = company_name.replace(/\b\w/g, c => c.toUpperCase());
+function generateCompanyNames(companyName: string) {
+  const company_slug = companyName.toLowerCase().replace(/\s+/g, '-');
+  const companyNameTitle = companyName.replace(/\b\w/g, c => c.toUpperCase());
+  
+  return {
+    company_slug,
+    companyNameTitle,
+    pageUrl: `https://www.linkedin.com/company/${company_slug}`,
+    companyPostUrl: `https://www.linkedin.com/company/${company_slug}/posts`
+  };
+}
 
 // ----------------- Selectors -----------------
 const SEL_USER = '#username';
@@ -371,15 +378,19 @@ async function exportCsv(filePath: string, rows: any[]) {
   csv.end();
 }
 
-// ----------------- Main -----------------
-async function run() {
-  const browser = await chromium.launch({ headless: false,  args: ['--disable-blink-features=AutomationControlled'], 
+// ----------------- Main Scraping Function -----------------
+export async function scrapeCompanyPosts(companyName: string): Promise<any[]> {
+  const { pageUrl, companyPostUrl, companyNameTitle } = generateCompanyNames(companyName);
+  
+  const browser = await chromium.launch({ 
+    headless: false,  
+    args: ['--disable-blink-features=AutomationControlled'], 
     proxy: {
-    server: 'http://gw.dataimpulse.com:823',
-    username: '2cef711aaa1a060b00b2',
-    password: '71e56626760e1077'  
-  },
-});
+      server: 'http://gw.dataimpulse.com:823',
+      username: '2cef711aaa1a060b00b2',
+      password: '71e56626760e1077'  
+    },
+  });
 
   // If storage state exists, pass path to makeStealthyContext so it will be used.
   const context = await makeStealthyContext(browser, fs.existsSync(STORAGE_STATE_PATH) ? STORAGE_STATE_PATH : undefined);
@@ -439,6 +450,7 @@ async function run() {
     } else if (DEBUG) {
       console.log('Loaded context with storageState from', STORAGE_STATE_PATH);
     }
+    
     await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded' });
 
     await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
@@ -446,12 +458,6 @@ async function run() {
     await humanPause(800, 1400);
     await page.goto(companyPostUrl, { waitUntil: 'domcontentloaded' });
     await humanPause(600, 1000);
-
-    // Now go to posts page and continue scraping
-    // let post_page = pageUrl.replace(/\/+$/, '') + '/posts';
-    // post_page = post_page.replace('//posts', '/posts');
-    // await page.goto(post_page, { waitUntil: 'domcontentloaded' });
-    // await humanPause(600, 1000);
 
     await savePageHTML(page, `${companyNameTitle}_initial.html`);
 
@@ -509,11 +515,10 @@ async function run() {
       }
     }
 
-    // Sort & export
+    // Sort by engagement
     results.sort((a, b) => (b.likesNumeric || 0) - (a.likesNumeric || 0));
-    await exportCsv(`${companyNameTitle}_posts.csv`, results.map(({ comments, ...flat }) => flat));
-    await fs.writeJson(`${companyNameTitle}_posts_with_comments.json`, results, { spaces: 2 });
-    console.log('Exported CSV + JSON.');
+    
+    return results;
   } finally {
     try { await page.close(); } catch {}
     try { await context.close(); } catch {}
@@ -521,7 +526,20 @@ async function run() {
   }
 }
 
-run().catch(e => {
-  console.error(e);
-  process.exit(1);
-});
+// ----------------- Legacy Main Function (for backwards compatibility) -----------------
+async function run() {
+  const companyName = "ClickUp"; // Default company for legacy usage
+  const { companyNameTitle } = generateCompanyNames(companyName);
+  
+  try {
+    const results = await scrapeCompanyPosts(companyName);
+    
+    // Export results
+    await exportCsv(`${companyNameTitle}_posts.csv`, results.map(({ comments, ...flat }) => flat));
+    await fs.writeJson(`${companyNameTitle}_posts_with_comments.json`, results, { spaces: 2 });
+    console.log('Exported CSV + JSON.');
+  } catch (error) {
+    console.error('Scraping failed:', error);
+    throw error;
+  }
+}

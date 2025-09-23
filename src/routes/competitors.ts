@@ -1,5 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import client from '../db';
+import { scrapeCompanyPosts } from '../linkedin-scraper';
+import { analyzeCompetitorData } from '../services/gemini-service';
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import { CompetitorAnalysisResponseSchema } from '../schemas/gemini-schemas';
+import { insertCompetitorAnalysisData } from '../services/competitor-analysis-service';
 
 interface CompetitorBody {
   name: string;
@@ -67,15 +73,88 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             await client.query(sourceQuery, [competitor.competitor_id, source_id]);
           }
         }
-        // Commit transaction
+        
+        // Commit transaction first to ensure competitor is saved
         await client.query('COMMIT');
 
-        
+        // Now perform LinkedIn scraping and analysis
+        try {
+          console.log(`Starting LinkedIn scraping for company: ${name}`);
+          
+          // Step 1: Scrape LinkedIn posts
+          const scraperData = await scrapeCompanyPosts(name);
+          
+          if (!scraperData || scraperData.length === 0) {
+            console.warn(`No LinkedIn data found for company: ${name}`);
+            return reply.code(201).send({
+              success: true,
+              data: competitor,
+              warning: 'Competitor created but no LinkedIn data found. Company may not exist on LinkedIn or scraping failed.'
+            });
+          }
+          
+          console.log(`Successfully scraped ${scraperData.length} posts for ${name}`);
+          
+          // Step 2: Analyze with Gemini
+          const analysisResult = await analyzeCompetitorData({
+            dataset: scraperData,
+          });
 
-        return reply.code(201).send({
-          success: true,
-          data: competitor
-        });
+          const validatedResult = CompetitorAnalysisResponseSchema.parse(analysisResult );
+          
+                  // Insert the analysis data into the database
+       const insertResponse = await insertCompetitorAnalysisData({
+                    userId: user_id,
+                    competitorId: competitor.competitor_id,
+                    analysisData: validatedResult
+                  });
+                  
+            
+        console.log(`Analysis data inserted.`);    
+  
+          
+          return reply.code(201).send({
+            success: true,
+            data: competitor,
+            analysis: {
+              posts_scraped: scraperData.length,
+              features_found: analysisResult.features?.length || 0,
+              complaints_found: analysisResult.complaints?.length || 0,
+              leads_found: analysisResult.leads?.length || 0,
+              alternatives_found: analysisResult.alternatives?.length || 0,
+            }
+          });
+          
+        } catch (scrapingError: any) {
+          console.error('Error during scraping/analysis:', scrapingError);
+          
+          // Return success for competitor creation but with scraping error
+          if (scrapingError.message?.includes('LinkedIn')) {
+            return reply.code(201).send({
+              success: true,
+              data: competitor,
+              error: 'Competitor created successfully, but LinkedIn scraping failed. The company page may not exist or be accessible.'
+            });
+          } else if (scrapingError.message?.includes('GEMINI_API_KEY')) {
+            return reply.code(201).send({
+              success: true,
+              data: competitor,
+              error: 'Competitor created and scraped successfully, but Gemini AI analysis failed due to missing API key.'
+            });
+          } else if (scrapingError.message?.includes('Gemini')) {
+            return reply.code(201).send({
+              success: true,
+              data: competitor,
+              error: 'Competitor created and scraped successfully, but Gemini AI analysis failed.'
+            });
+          } else {
+            return reply.code(201).send({
+              success: true,
+              data: competitor,
+              error: `Competitor created successfully, but analysis failed: ${scrapingError.message}`
+            });
+          }
+        }
 
       } catch (transactionError) {
         await client.query('ROLLBACK');
@@ -103,9 +182,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
         error: 'Internal server error'
       });
     }
-  });
-
-  // Get competitors
+  });  // Get competitors
   fastify.get<{ Querystring: CompetitorQuery }>('/api/competitors', async (request: FastifyRequest<{ Querystring: CompetitorQuery }>, reply: FastifyReply) => {
     try {
       const { user_id, limit = '50', offset = '0' } = request.query;

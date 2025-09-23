@@ -128,7 +128,6 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
 
         const analysisRequest: GeminiAnalysisRequest = {
           dataset: validatedData.dataset,
-          prompt: validatedData.prompt
         };
 
         const result = await analyzeCompetitorData(analysisRequest);

@@ -4,7 +4,6 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/
 
 export interface GeminiAnalysisRequest {
   dataset: any[];
-  prompt?: string;
 }
 
 export interface GeminiAnalysisResponse {
@@ -199,7 +198,7 @@ Clear switching intent: direct mentions of possible competitor alternatives, rec
 
 Process the following competitor posts and comments:`;
 
-  const prompt = request.prompt || defaultPrompt;
+  const prompt =  defaultPrompt;
   const datasetMinified = JSON.stringify(request.dataset);
   console.log(datasetMinified);
 
@@ -281,16 +280,17 @@ export async function generateText(request: GeminiTextRequest): Promise<GeminiTe
   };
 
   try {
-    const response = await axios.post(GEMINI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-goog-api-key": GEMINI_API_KEY
-      },
-      body: JSON.stringify(body)
-    });
+    const response = await axios.post(GEMINI_API_URL,
+      body,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-goog-api-key": GEMINI_API_KEY
+        }
+      }
+    );
 
-    if (!response.data.ok) {
+    if (!response.data) {
       const errorText = await response.data.text();
       throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
@@ -299,7 +299,7 @@ export async function generateText(request: GeminiTextRequest): Promise<GeminiTe
       throw new Error("Invalid response format from Gemini API");
     }
 
-    const generatedText = response.data.candidates[0].content.parts[0].text; // Removed `.json()` call
+    const generatedText = response.data.candidates[0].content.parts[0].text;
     const usage = response.data.usageMetadata ? {
       prompt_tokens: response.data.usageMetadata.promptTokenCount || 0,
       completion_tokens: response.data.usageMetadata.candidatesTokenCount || 0,
