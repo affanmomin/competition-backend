@@ -27,7 +27,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
   // Add competitor
   fastify.post<{ Body: CompetitorBody }>('/api/competitors', async (request: FastifyRequest<{ Body: CompetitorBody }>, reply: FastifyReply) => {
     try {
-      const { name, user_id } = request.body;
+      const { name, user_id, source_ids } = request.body;
 
       // Validate required fields
       if (!name  || !user_id) {
@@ -44,18 +44,42 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
         .replace(/[^\w\-]+/g, '') // Remove all non-word chars
         .replace(/\-\-+/g, '-');  // Replace multiple hyphens with ek hypehn
 
-      const query = `
-        INSERT INTO public.competitors (name, slug, user_id)
-        VALUES ($1, $2, $3)
-        RETURNING *
-      `;
+      // Start transaction
+      await client.query('BEGIN');
 
-      const result = await client.query(query, [name, slug, user_id]);
-      
-      return reply.code(201).send({
-        success: true,
-        data: result.rows[0]
-      });
+      try {
+        // Insert competitor
+        const competitorQuery = `
+          INSERT INTO public.competitors (name, slug, user_id)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `;
+
+        const competitorResult = await client.query(competitorQuery, [name, slug, user_id]);
+        const competitor = competitorResult.rows[0];
+
+        // Insert competitor_sources if source_ids are provided
+          for (const source_id of source_ids) {
+            const sourceQuery = `
+              INSERT INTO public.competitor_sources (competitor_id, source_id)
+              VALUES ($1, $2)
+            `;
+            await client.query(sourceQuery, [competitor.competitor_id, source_id]);
+          }
+
+        // Commit transaction
+        await client.query('COMMIT');
+
+        return reply.code(201).send({
+          success: true,
+          data: competitor
+        });
+
+      } catch (transactionError) {
+        // Rollback transaction on error
+        await client.query('ROLLBACK');
+        throw transactionError;
+      }
 
     } catch (error: any) {
       console.error('Error adding competitor:', error);
@@ -63,14 +87,14 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
       // Handle unique constraint violation
       if (error.code === '23505') {
         return reply.code(409).send({
-          error: 'Competitor with this slug already exists'
+          error: 'Competitor with this slug already exists or duplicate source assignment'
         });
       }
       
       // Handle foreign key constraint violation
       if (error.code === '23503') {
         return reply.code(400).send({
-          error: 'Invalid user_id: user does not exist'
+          error: 'Invalid user_id or source_id: referenced record does not exist'
         });
       }
 
