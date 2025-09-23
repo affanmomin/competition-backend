@@ -65,7 +65,8 @@ export const queryRegistry: Record<string, QueryConfig> = {
     query: `
       SELECT COUNT(*) AS posts_analyzed
       FROM analyzed_posts ap
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3;
     `,
@@ -81,7 +82,8 @@ export const queryRegistry: Record<string, QueryConfig> = {
         COUNT(*) AS value,
         'Mentions' AS label
       FROM analyzed_posts ap
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       GROUP BY 1
@@ -100,7 +102,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
              COUNT(*) AS mentions
       FROM analyzed_posts ap
       JOIN competitors c ON c.competitor_id = ap.competitor_id
-      WHERE ap.user_id = $1
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       GROUP BY c.competitor_id, c.name
@@ -115,9 +117,10 @@ export const queryRegistry: Record<string, QueryConfig> = {
     query: `
       WITH tot AS (
         SELECT COUNT(*) AS total_mentions
-        FROM analyzed_posts
-        WHERE user_id = $1
-          AND analyzed_at >= $2 AND analyzed_at < $3
+        FROM analyzed_posts ap
+        JOIN competitors c ON c.competitor_id = ap.competitor_id
+        WHERE c.user_id = $1
+          AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       )
       SELECT
         c.name AS name,
@@ -126,7 +129,6 @@ export const queryRegistry: Record<string, QueryConfig> = {
       FROM competitors c
       LEFT JOIN analyzed_posts ap
              ON ap.competitor_id = c.competitor_id
-            AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       CROSS JOIN tot t
       WHERE c.user_id = $1
@@ -147,7 +149,6 @@ export const queryRegistry: Record<string, QueryConfig> = {
       FROM competitors c
       LEFT JOIN analyzed_posts ap
              ON ap.competitor_id = c.competitor_id
-            AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       WHERE c.user_id = $1
       GROUP BY c.competitor_id, c.name
@@ -202,7 +203,8 @@ export const queryRegistry: Record<string, QueryConfig> = {
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
       FROM alternatives a
-      WHERE a.user_id = $1
+      JOIN competitors c ON c.competitor_id = a.competitor_id
+      WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
       GROUP BY a.name
@@ -416,13 +418,15 @@ export const queryRegistry: Record<string, QueryConfig> = {
       WITH this AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        WHERE a.user_id = $1
+        JOIN competitors c ON c.competitor_id = a.competitor_id
+        WHERE c.user_id = $1
           AND a.last_updated >= $2 AND a.last_updated < $3
       ),
       prev AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        WHERE a.user_id = $1
+        JOIN competitors c ON c.competitor_id = a.competitor_id
+        WHERE c.user_id = $1
           AND a.last_updated >= ($2 - ($3 - $2))
           AND a.last_updated < $2
       )
@@ -444,8 +448,8 @@ export const queryRegistry: Record<string, QueryConfig> = {
              ap.excerpt,
              ap.platform
       FROM analyzed_posts ap
-      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       ORDER BY ap.analyzed_at DESC
@@ -494,7 +498,8 @@ export const queryRegistry: Record<string, QueryConfig> = {
         COUNT(DISTINCT comp.id) AS total_complaints,
         COUNT(DISTINCT a.id) AS total_alternatives
       FROM competitors c
-      LEFT JOIN sources s ON s.competitor_id = c.competitor_id
+      LEFT JOIN competitor_sources cs ON cs.competitor_id = c.competitor_id
+      LEFT JOIN sources s ON s.id = cs.source_id
       LEFT JOIN analyzed_posts ap ON ap.competitor_id = c.competitor_id
       LEFT JOIN leads l ON l.analyzed_post_id = ap.id AND l.user_id = c.user_id
       LEFT JOIN complaints comp ON comp.competitor_id = c.competitor_id
@@ -528,7 +533,7 @@ export const queryRegistry: Record<string, QueryConfig> = {
         c.slug AS competitor_slug
       FROM leads l
       LEFT JOIN analyzed_posts ap ON ap.id = l.analyzed_post_id
-      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
+      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id AND c.user_id = l.user_id
       WHERE l.user_id = $1
         AND ($2::timestamp is null OR l.created_at >= $2)
         AND ($3::timestamp is null OR l.created_at < $3)

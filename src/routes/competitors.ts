@@ -5,6 +5,7 @@ interface CompetitorBody {
   name: string;
   slug: string;
   user_id: string;
+  source_ids?: string[]; // Array of source UUIDs to link to this competitor
 }
 
 interface CompetitorQuery {

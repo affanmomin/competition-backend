@@ -58,7 +58,8 @@ exports.queryRegistry = {
         query: `
       SELECT COUNT(*) AS posts_analyzed
       FROM analyzed_posts ap
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3;
     `,
@@ -74,7 +75,8 @@ exports.queryRegistry = {
         COUNT(*) AS value,
         'Mentions' AS label
       FROM analyzed_posts ap
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       GROUP BY 1
@@ -93,7 +95,7 @@ exports.queryRegistry = {
              COUNT(*) AS mentions
       FROM analyzed_posts ap
       JOIN competitors c ON c.competitor_id = ap.competitor_id
-      WHERE ap.user_id = $1
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       GROUP BY c.competitor_id, c.name
@@ -108,9 +110,10 @@ exports.queryRegistry = {
         query: `
       WITH tot AS (
         SELECT COUNT(*) AS total_mentions
-        FROM analyzed_posts
-        WHERE user_id = $1
-          AND analyzed_at >= $2 AND analyzed_at < $3
+        FROM analyzed_posts ap
+        JOIN competitors c ON c.competitor_id = ap.competitor_id
+        WHERE c.user_id = $1
+          AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       )
       SELECT
         c.name AS name,
@@ -119,7 +122,6 @@ exports.queryRegistry = {
       FROM competitors c
       LEFT JOIN analyzed_posts ap
              ON ap.competitor_id = c.competitor_id
-            AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       CROSS JOIN tot t
       WHERE c.user_id = $1
@@ -140,7 +142,6 @@ exports.queryRegistry = {
       FROM competitors c
       LEFT JOIN analyzed_posts ap
              ON ap.competitor_id = c.competitor_id
-            AND ap.user_id = $1
             AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
       WHERE c.user_id = $1
       GROUP BY c.competitor_id, c.name
@@ -195,7 +196,8 @@ exports.queryRegistry = {
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
       FROM alternatives a
-      WHERE a.user_id = $1
+      JOIN competitors c ON c.competitor_id = a.competitor_id
+      WHERE c.user_id = $1
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true)
       GROUP BY a.name
@@ -409,13 +411,15 @@ exports.queryRegistry = {
       WITH this AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        WHERE a.user_id = $1
+        JOIN competitors c ON c.competitor_id = a.competitor_id
+        WHERE c.user_id = $1
           AND a.last_updated >= $2 AND a.last_updated < $3
       ),
       prev AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
         FROM alternatives a
-        WHERE a.user_id = $1
+        JOIN competitors c ON c.competitor_id = a.competitor_id
+        WHERE c.user_id = $1
           AND a.last_updated >= ($2 - ($3 - $2))
           AND a.last_updated < $2
       )
@@ -437,8 +441,8 @@ exports.queryRegistry = {
              ap.excerpt,
              ap.platform
       FROM analyzed_posts ap
-      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id
-      WHERE ap.user_id = $1
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE c.user_id = $1
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3
       ORDER BY ap.analyzed_at DESC
