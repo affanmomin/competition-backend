@@ -6,8 +6,9 @@
  * IMPORTANT: Respect LinkedIn's Terms of Service.
  */
 
-import { chromium, Page, ElementHandle } from 'playwright';
+import { chromium, Page, ElementHandle, BrowserContext, Browser } from 'playwright';
 import * as fs from 'fs-extra';
+import * as path from 'path';
 import { format as csvFormat } from '@fast-csv/format';
 import { subDays, subWeeks, subMonths, subYears, format as dfFormat } from 'date-fns';
 
@@ -22,6 +23,8 @@ const DEBUG = false;
 const INCLUDE_COMMENTS = true;
 const MAX_COMMENT_PAGES = 3;        // how many times to click “Load more comments”
 const MAX_COMMENTS_PER_POST = 100;  // hard cap per post
+
+const STORAGE_STATE_PATH = path.resolve(process.cwd(), 'storageState_nike.json'); // <- session file
 
 // ----------------- Derived file names -----------------
 const company_name = pageUrl.replace(/\/+$/, '').split('/').pop()!.replace(/-/g, ' ');
@@ -86,7 +89,7 @@ async function humanClickElement(page: Page, el: ElementHandle<Element> | null) 
       const targetY = box.y + rand(8, Math.max(10, box.height - 8));
       await humanMove(page, targetX, targetY, randint(8, 20));
       await humanPause(80, 120);
-      await el.click({ timeout: 2000 });
+      await el.click({ timeout: 3000 });
       await humanPause(120, 300);
     } else {
       await page.evaluate((node) => (node as HTMLElement).click(), el);
@@ -125,8 +128,8 @@ async function humanScrollTo(page: Page, y: number) {
   await humanPause(80, 180);
 }
 
-// ----------------- Stealth context -----------------
-async function makeStealthyContext(browser) {
+// ----------------- Stealth context (supports storageState reuse) -----------------
+async function makeStealthyContext(browser: Browser, storageStatePath?: string): Promise<BrowserContext> {
   const viewportOptions = [
     { width: 1200 + randint(-60, 60), height: 780 + randint(-60, 60) },
     { width: 1366 + randint(-40, 40), height: 768 + randint(-20, 20) },
@@ -141,7 +144,7 @@ async function makeStealthyContext(browser) {
   ];
   const ua = userAgents[randint(0, userAgents.length - 1)];
 
-  const context = await browser.newContext({
+  const contextOpts: any = {
     viewport: vp,
     userAgent: ua,
     locale: 'en-US',
@@ -149,8 +152,16 @@ async function makeStealthyContext(browser) {
     javaScriptEnabled: true,
     bypassCSP: true,
     extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' }
-  });
+  };
 
+  if (storageStatePath && fs.existsSync(storageStatePath)) {
+    contextOpts.storageState = storageStatePath;
+    if (DEBUG) console.log('Using saved storageState:', storageStatePath);
+  }
+
+  const context = await browser.newContext(contextOpts);
+
+  // minimal navigator masking
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
     Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
@@ -362,30 +373,66 @@ async function exportCsv(filePath: string, rows: any[]) {
 // ----------------- Main -----------------
 async function run() {
   const browser = await chromium.launch({ headless: false, args: ['--disable-blink-features=AutomationControlled'] });
-  const context = await makeStealthyContext(browser);
+
+  // If storage state exists, pass path to makeStealthyContext so it will be used.
+  const context = await makeStealthyContext(browser, fs.existsSync(STORAGE_STATE_PATH) ? STORAGE_STATE_PATH : undefined);
   const page = await context.newPage();
 
   try {
     await humanPause(400, 800);
 
-    // Login
-    await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
-    await humanPause(600, 900);
+    // If we don't have a saved storage state, perform login then save it.
+    const hasSavedState = fs.existsSync(STORAGE_STATE_PATH);
 
-    const userEl = await page.$(SEL_USER);
-    const passEl = await page.$(SEL_PASS);
-    if (userEl && passEl) {
-      await humanClickElement(page, userEl);
-      await humanType(userEl, username);
-      await humanClickElement(page, passEl);
-      await humanType(passEl, password);
-      const submit = await page.$(SEL_SUBMIT);
-      if (submit) await humanClickElement(page, submit); else await page.keyboard.press('Enter');
+    if (!hasSavedState) {
+      // LOGIN
+      await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+      await humanPause(600, 900);
+
+      const userEl = await page.$(SEL_USER);
+      const passEl = await page.$(SEL_PASS);
+      if (userEl && passEl) {
+        await humanClickElement(page, userEl);
+        await humanType(userEl, username);
+        await humanClickElement(page, passEl);
+        await humanType(passEl, password);
+        const submit = await page.$(SEL_SUBMIT);
+        if (submit) await humanClickElement(page, submit); else await page.keyboard.press('Enter');
+      } else {
+        // If the login inputs are not found, still navigate to login and wait
+        await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
+      }
+
+      // Wait for something that indicates login success — e.g. presence of the profile nav or redirect away from login page
+      try {
+        await page.waitForNavigation({ timeout: 15000, waitUntil: 'domcontentloaded' });
+      } catch (e) {
+        // navigation may not occur; continue and check for logged-in indicator
+      }
+      await humanPause(1500, 2500);
+
+      // Basic heuristic: if page contains profile menu or feed, assume logged in
+      const loggedInIndicator = await page.$('header, nav, #profile-nav-item, .global-nav__me-photo, .nav-item__profile-member-photo');
+      if (loggedInIndicator) {
+        // save storage state (cookies + localStorage)
+        await context.storageState({ path: STORAGE_STATE_PATH });
+        if (DEBUG) console.log('Saved storageState to', STORAGE_STATE_PATH);
+      } else {
+        // Try a second check: check if cookie named li_at exists
+        const cookies = await context.cookies();
+        const hasLiAt = cookies.some(c => c.name === 'li_at');
+        if (hasLiAt) {
+          await context.storageState({ path: STORAGE_STATE_PATH });
+          if (DEBUG) console.log('Saved storageState (cookie-based) to', STORAGE_STATE_PATH);
+        } else {
+          console.warn('Login probably failed or required MFA. No storageState saved.');
+        }
+      }
+    } else if (DEBUG) {
+      console.log('Loaded context with storageState from', STORAGE_STATE_PATH);
     }
 
-    await page.waitForTimeout(2500 + randint(0, 1200));
-
-    // Go to posts
+    // Now go to posts page and continue scraping
     let post_page = pageUrl.replace(/\/+$/, '') + '/posts';
     post_page = post_page.replace('//posts', '/posts');
     await page.goto(post_page, { waitUntil: 'domcontentloaded' });
