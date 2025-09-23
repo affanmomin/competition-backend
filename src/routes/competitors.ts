@@ -157,7 +157,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
       const { id } = request.params;
       const { user_id } = request.body || {};
 
-      let query = 'DELETE FROM public.competitors WHERE id = $1';
+      let query = 'DELETE FROM public.competitors WHERE competitor_id = $1';
       const params: any[] = [id];
 
       // If user_id is provided, ensure user can only delete their own competitors
