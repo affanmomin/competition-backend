@@ -15,7 +15,8 @@ import { subDays, subWeeks, subMonths, subYears, format as dfFormat } from 'date
 // ----------------- CONFIG -----------------
 const username = "faizan514pathan@gmail.com";
 const password = "jijji.786";
-const pageUrl  = "https://www.linkedin.com/company/nike";
+const pageUrl  = "https://www.linkedin.com/company/clickup-app";
+const companyPostUrl = "https://www.linkedin.com/company/clickup-app/posts";
 const loginUrl = "https://www.linkedin.com/login";
 
 const DEBUG = false;
@@ -24,7 +25,7 @@ const INCLUDE_COMMENTS = true;
 const MAX_COMMENT_PAGES = 3;        // how many times to click “Load more comments”
 const MAX_COMMENTS_PER_POST = 100;  // hard cap per post
 
-const STORAGE_STATE_PATH = path.resolve(process.cwd(), 'storageState_nike.json'); // <- session file
+const STORAGE_STATE_PATH = path.resolve(process.cwd(), 'storageState.json'); // <- session file
 
 // ----------------- Derived file names -----------------
 const company_name = pageUrl.replace(/\/+$/, '').split('/').pop()!.replace(/-/g, ' ');
@@ -372,7 +373,13 @@ async function exportCsv(filePath: string, rows: any[]) {
 
 // ----------------- Main -----------------
 async function run() {
-  const browser = await chromium.launch({ headless: false, args: ['--disable-blink-features=AutomationControlled'] });
+  const browser = await chromium.launch({ headless: false,  args: ['--disable-blink-features=AutomationControlled'], 
+    proxy: {
+    server: 'http://gw.dataimpulse.com:823',
+    username: '2cef711aaa1a060b00b2',
+    password: '71e56626760e1077'  
+  },
+});
 
   // If storage state exists, pass path to makeStealthyContext so it will be used.
   const context = await makeStealthyContext(browser, fs.existsSync(STORAGE_STATE_PATH) ? STORAGE_STATE_PATH : undefined);
@@ -405,6 +412,7 @@ async function run() {
 
       // Wait for something that indicates login success — e.g. presence of the profile nav or redirect away from login page
       try {
+        await page.waitForTimeout(240000); // wait 4 mins
         await page.waitForNavigation({ timeout: 15000, waitUntil: 'domcontentloaded' });
       } catch (e) {
         // navigation may not occur; continue and check for logged-in indicator
@@ -431,12 +439,19 @@ async function run() {
     } else if (DEBUG) {
       console.log('Loaded context with storageState from', STORAGE_STATE_PATH);
     }
+    await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded' });
+
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
+
+    await humanPause(800, 1400);
+    await page.goto(companyPostUrl, { waitUntil: 'domcontentloaded' });
+    await humanPause(600, 1000);
 
     // Now go to posts page and continue scraping
-    let post_page = pageUrl.replace(/\/+$/, '') + '/posts';
-    post_page = post_page.replace('//posts', '/posts');
-    await page.goto(post_page, { waitUntil: 'domcontentloaded' });
-    await humanPause(600, 1000);
+    // let post_page = pageUrl.replace(/\/+$/, '') + '/posts';
+    // post_page = post_page.replace('//posts', '/posts');
+    // await page.goto(post_page, { waitUntil: 'domcontentloaded' });
+    // await humanPause(600, 1000);
 
     await savePageHTML(page, `${companyNameTitle}_initial.html`);
 
