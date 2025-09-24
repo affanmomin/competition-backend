@@ -27,6 +27,18 @@ const PARALLEL_LIMIT = 2;           // number of tweet pages to scrape in parall
 
 const STORAGE_STATE_PATH = path.resolve(process.cwd(), 'twitter-session.json'); // <- session file
 
+// ----------------- Per-run Human Profile (8) -----------------
+export const HUMAN_PROFILE = {
+  // Multiplier for dwell/pauses and general tempo
+  paceMultiplier: 0.85 + Math.random() * 0.7, // 0.85x–1.55x
+  // Typing style variance
+  typoRate: 0.05 + Math.random() * 0.06,      // 5–11%
+  // Mouse hover tendency
+  hoveriness: Math.random(),                   // 0–1
+  // Scroll aggressiveness
+  scrollAggro: Math.random(),                  // 0–1
+};
+
 // ----------------- Derived file names -----------------
 function generateTwitterNames(profileHandle: string) {
   const profile_slug = profileHandle.replace('@', '').toLowerCase();
@@ -63,25 +75,98 @@ function rand(min: number, max: number) {
 }
 
 async function pause(min = 140, max = 320) {
-  await new Promise(r => setTimeout(r, rand(min, max)));
-}   
+  // Apply human pace multiplier
+  const k = HUMAN_PROFILE.paceMultiplier;
+  const adjMin = Math.max(1, Math.floor(min * k));
+  const adjMax = Math.max(adjMin + 1, Math.floor(max * k));
+  await new Promise(r => setTimeout(r, rand(adjMin, adjMax)));
+}
 
-async function humanScroll(page: Page, factor = 3) {
-  const segments = rand(3, 6);
-  for (let i = 0; i < segments; i++) {
-    await page.evaluate((segments) => {
-      const winH = window.innerHeight;
-      const delta = Math.floor(winH / segments) + Math.floor(Math.random() * 30);
-      window.scrollBy(0, delta);
-    }, segments);
-    await pause(120, 280);
+// ----------------- (1) Human mouse movement, hover, slow click -----------------
+type Point = { x: number; y: number };
+
+function bezier(p0:Point,p1:Point,p2:Point,p3:Point,t:number){
+  const u=1-t, tt=t*t, uu=u*u, uuu=uu*u, ttt=tt*t;
+  return {
+    x: uuu*p0.x + 3*uu*t*p1.x + 3*u*tt*p2.x + ttt*p3.x,
+    y: uuu*p0.y + 3*uu*t*p1.y + 3*u*tt*p2.y + ttt*p3.y,
+  };
+}
+
+async function humanMove(page: Page, toX: number, toY: number) {
+  const vp = page.viewportSize();
+  const from = {
+    x: Math.floor((vp?.width || 1280) * (0.45 + Math.random()*0.1)),
+    y: Math.floor((vp?.height || 720) * (0.45 + Math.random()*0.1))
+  };
+  const p1 = { x: from.x + rand(-60, 60), y: from.y + rand(-40, 40) };
+  const p2 = { x: toX + rand(-80, 80),     y: toY + rand(-40, 40) };
+  const p3 = { x: toX, y: toY };
+
+  const steps = Math.floor(Math.random()*18)+12;
+  for (let i=0;i<=steps;i++){
+    const t = i/steps;
+    const p = bezier(from,p1,p2,p3,t);
+    await page.mouse.move(p.x, p.y, { steps: 1 });
+    await pause(4, 14);
   }
 }
 
-async function slowTypeInto(page: Page, selector: string, text: string) {
+async function humanHover(page: Page, selector: string){
+  const el = await page.waitForSelector(selector, { timeout: 12000 });
+  const box = await el?.boundingBox();
+  if (!box) return;
+  const x = box.x + box.width*(0.3+Math.random()*0.4);
+  const y = box.y + box.height*(0.3+Math.random()*0.4);
+  await humanMove(page, x, y);
+  await pause(200, 600);
+}
+
+async function humanClick(page: Page, selector: string){
+  const el = await page.waitForSelector(selector, { timeout: 15000 });
+  const box = await el?.boundingBox();
+  if (!box) return;
+  const x = box.x + box.width*(0.35+Math.random()*0.3);
+  const y = box.y + box.height*(0.35+Math.random()*0.3);
+  await humanMove(page, x, y);
+  await pause(90, 220);
+  await page.mouse.down();
+  await pause(40, 120);
+  await page.mouse.up();
+  await pause(160, 420);
+}
+
+// ----------------- (2) Human wheel scrolling -----------------
+async function humanWheelScroll(page: Page, range: [number, number] = [3,6]) {
+  const reps = rand(range[0], range[1]);
+  for (let i=0;i<reps;i++){
+    // base delta depends on viewport and scrollAggro
+    const deltaBase = Math.floor((await page.evaluate(() => window.innerHeight)) * (0.45 + HUMAN_PROFILE.scrollAggro * 0.6));
+    const direction = Math.random()<0.18 ? -1 : 1; // sometimes scroll up
+    await page.mouse.wheel(0, direction * deltaBase);
+    await pause(200, 500);
+    if (Math.random()<0.35) await page.mouse.wheel(0, rand(-60, 60)); // jitter
+    await pause(400, 1200); // "reading" dwell
+  }
+}
+
+// ----------------- (4) Typing with imperfections -----------------
+async function humanType(page: Page, selector: string, text: string){
   const loc = page.locator(selector);
   await loc.click({ timeout: 15000 });
-  await page.keyboard.type(text, { delay: rand(70, 120) });
+  const chars = text.split('');
+  for (const ch of chars){
+    // typo?
+    if (/[a-z]/i.test(ch) && Math.random() < HUMAN_PROFILE.typoRate) {
+      const typo = String.fromCharCode(ch.charCodeAt(0) + (Math.random()<0.5 ? 1 : -1));
+      await page.keyboard.type(typo, { delay: rand(50, 120) });
+      await pause(60, 140);
+      await page.keyboard.press('Backspace');
+      await pause(40, 110);
+    }
+    await page.keyboard.type(ch, { delay: rand(60, 150) * HUMAN_PROFILE.paceMultiplier });
+    if (Math.random()<0.06) await pause(100, 260); // hesitation
+  }
 }
 
 // ----------------- Stealth context (supports storageState reuse) -----------------
@@ -98,11 +183,16 @@ async function makeStealthyContext(browser: Browser, storageStatePath?: string):
 
   const context = await browser.newContext(contextOpts);
 
-  // Block unnecessary resources
-  await context.route('**/*', route => {
+  // Block unnecessary resources + (10) gentle jitter
+  await context.route('**/*', async (route) => {
     const type = route.request().resourceType();
-    if (['font', 'media'].includes(type)) route.abort();
-    else route.continue();
+    if (['font', 'media'].includes(type)) return route.abort();
+
+    // 7% of requests get a tiny random delay to mimic home Wi-Fi wobble
+    if (Math.random() < 0.07) {
+      await pause(60, 220);
+    }
+    return route.continue();
   });
 
   return context;
@@ -161,13 +251,20 @@ async function login(page: Page) {
 
     await page.waitForSelector(SEL_USER, { timeout: 20000 });
     await pause(200, 400);
-    await slowTypeInto(page, SEL_USER, TWITTER_USER);
+
+    // (1 + 4) Hover + slow click + human typing for username
+    if (HUMAN_PROFILE.hoveriness > 0.3) await humanHover(page, SEL_USER);
+    await humanClick(page, SEL_USER);
+    await humanType(page, SEL_USER, TWITTER_USER);
     await pause(160, 260);
     await page.keyboard.press("Enter");
 
     await page.waitForSelector(SEL_PASS, { timeout: 15000 });
     await pause(240, 460);
-    await slowTypeInto(page, SEL_PASS, TWITTER_PASS);
+
+    if (HUMAN_PROFILE.hoveriness > 0.4) await humanHover(page, SEL_PASS);
+    await humanClick(page, SEL_PASS);
+    await humanType(page, SEL_PASS, TWITTER_PASS);
     await pause(160, 300);
     await page.keyboard.press("Enter");
 
@@ -248,7 +345,8 @@ async function collectTweetUrls(page: Page, limit: number): Promise<{ url: strin
     }));
 
     if (tweets.length < limit) {
-      await humanScroll(page, 3);
+      // (2) replace old scroll with wheel-based human scroll
+      await humanWheelScroll(page, [2, 4]);
       scrollAttempts++;
     }
   }
@@ -292,7 +390,8 @@ async function scrapeTweetPage(context: BrowserContext, tweetObj: { url: string;
       else noNewCount = 0;
 
       if (commentMap.size < MAX_COMMENTS_PER_POST && scrollCount < MAX_COMMENT_PAGES) {
-        await humanScroll(page, 5);
+        // (2) wheel-based scroll instead of evaluate-scroll
+        await humanWheelScroll(page, [3, 5]);
         await pause(260, 520);
         scrollCount++;
       }
@@ -372,8 +471,11 @@ export async function scrapeTwitterPosts(profileHandle: string): Promise<any[]> 
       await saveSession(context);
     }
 
-    // Navigate to profile
+    // Navigate to profile (1) hover the avatar/profile link sometimes
     await page.goto(profileUrl, {timeout: 25000 });
+    if (HUMAN_PROFILE.hoveriness > 0.5) {
+      await humanHover(page, 'a[href*="/photo"]');
+    }
     await page.waitForSelector('article[role="article"], article[data-testid="tweet"]', { timeout: 15000 });
 
     // Collect tweet URLs
