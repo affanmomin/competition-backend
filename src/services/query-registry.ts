@@ -156,6 +156,159 @@ export const queryRegistry: Record<string, QueryConfig> = {
     `,
     chartType: 'bar'
   },
+'top-features': {
+  key: 'top-features',
+  title: 'Top Features',
+  description: 'Current top features by competitor',
+  query: `
+    SELECT
+      f.canonical AS name,
+      'Features' AS label,
+      COUNT(*) AS value
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND ($2::timestamp is null OR f.last_updated >= $2)
+      AND ($3::timestamp is null OR f.last_updated < $3)
+    GROUP BY f.canonical
+    ORDER BY value DESC
+    LIMIT 20;
+  `,
+  chartType: 'bar'
+},
+'features-trend': {
+  key: 'features-trend',
+  title: 'Features Trend',
+  description: 'Daily trend of new features discovered',
+  query: `
+    SELECT
+      date_trunc('day', f.created_at)::timestamptz AS date,
+      COUNT(*) AS value,
+      'Features' AS label
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND f.created_at >= $2
+      AND f.created_at < $3
+    GROUP BY 1
+    ORDER BY 1;
+  `,
+  chartType: 'line'
+},
+'features-by-type': {
+  key: 'features-by-type',
+  title: 'Features by Type',
+  description: 'Feature distribution by type',
+  query: `
+    SELECT
+      COALESCE(f.feature_type, 'unknown') AS name,
+      'Features' AS label,
+      COUNT(*) AS value
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND ($2::timestamp is null OR f.last_updated >= $2)
+      AND ($3::timestamp is null OR f.last_updated < $3)
+    GROUP BY f.feature_type
+    ORDER BY value DESC;
+  `,
+  chartType: 'pie'
+},
+'features-by-impact': {
+  key: 'features-by-impact',
+  title: 'Features by Impact Level',
+  description: 'Feature distribution by impact level',
+  query: `
+    SELECT
+      COALESCE(f.impact_level, 'unknown') AS name,
+      'Features' AS label,
+      COUNT(*) AS value
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND ($2::timestamp is null OR f.last_updated >= $2)
+      AND ($3::timestamp is null OR f.last_updated < $3)
+    GROUP BY f.impact_level
+    ORDER BY 
+      CASE f.impact_level 
+        WHEN 'critical' THEN 1
+        WHEN 'major' THEN 2
+        WHEN 'minor' THEN 3
+        ELSE 4
+      END;
+  `,
+  chartType: 'bar'
+},
+'total-features': {
+  key: 'total-features',
+  title: 'Total Features',
+  description: 'Total features discovered with period comparison',
+  query: `
+    WITH this AS (
+      SELECT COUNT(*) AS v
+      FROM features f
+      JOIN competitors c ON c.competitor_id = f.competitor_id
+      WHERE c.user_id = $1
+        AND f.created_at >= $2 AND f.created_at < $3
+    ),
+    prev AS (
+      SELECT COUNT(*) AS v
+      FROM features f
+      JOIN competitors c ON c.competitor_id = f.competitor_id
+      WHERE c.user_id = $1
+        AND f.created_at >= ($2 - ($3 - $2))
+        AND f.created_at < $2
+    )
+    SELECT this.v AS current_value,
+           prev.v AS previous_value,
+           CASE WHEN prev.v = 0 THEN NULL
+                ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
+    FROM this, prev;
+  `,
+  chartType: 'number'
+},
+'features-by-competitor': {
+  key: 'features-by-competitor',
+  title: 'Features by Competitor',
+  description: 'Feature count by competitor',
+  query: `
+    SELECT
+      c.name AS name,
+      'Features' AS label,
+      COUNT(f.id) AS value
+    FROM competitors c
+    LEFT JOIN features f ON f.competitor_id = c.competitor_id
+      AND ($2::timestamp is null OR f.last_updated >= $2)
+      AND ($3::timestamp is null OR f.last_updated < $3)
+    WHERE c.user_id = $1
+    GROUP BY c.competitor_id, c.name
+    ORDER BY value DESC;
+  `,
+  chartType: 'bar'
+},
+'recent-features': {
+  key: 'recent-features',
+  title: 'Recent Features',
+  description: 'Recently discovered features',
+  query: `
+    SELECT
+      f.canonical AS feature,
+      c.name AS competitor,
+      f.feature_type,
+      f.impact_level,
+      f.confidence_score,
+      f.platform,
+      f.created_at::date AS discovered_date
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND f.created_at >= $2
+      AND f.created_at < $3
+    ORDER BY f.created_at DESC
+    LIMIT 50;
+  `,
+  chartType: 'table'
+},
   'top-complaints': {
     key: 'top-complaints',
     title: 'Top Complaints',
