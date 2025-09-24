@@ -1,0 +1,782 @@
+[
+  {
+    "review_id": "0d024852-6708-4c93-b94d-f167ed51102d",
+    "author": "Alex Kotenko",
+    "rating": 3,
+    "date": "August 1, 2025",
+    "text": "Login process very clunky. it doesn't use Android proper and instead opens built-in browser. I'm not logged in in that browser, so I cannot use Google OAuth. When trying to use the email with a one-time code, after log in it doesn't actually open back the app and it stays inside the built-in browser. There is a button in the bottom to go back to the app, but it's easy to miss. I tried three times before I could finally log in.",
+    "helpful_count": 1,
+    "developer_response_date": "August 5, 2025",
+    "developer_response_text": "Thanks for flagging; you definitely shouldn't be brought to the built-in browser after successfully logging in. We've filed a bug for this so we can take a closer look."
+  },
+  {
+    "review_id": "9076f92e-404a-4d89-a360-dcd4b9eb7148",
+    "author": "Martin Zima",
+    "rating": 4,
+    "date": "September 18, 2025",
+    "text": "I'm not able to sign in. Once I select my Google user account, I get redirected to Linear homepage (inside the app in the login dialog) and nothing happens.",
+    "helpful_count": 0,
+    "developer_response_date": "September 12, 2025",
+    "developer_response_text": "Do you have the PWA installed as well? If so, does removing the PWA resolve this problem? If it doesn't, please let us know at support@linear.app so we can take a look at what else might be causing this behavior."
+  },
+  {
+    "review_id": "e4725604-4f13-4a04-8f50-e084c9f84e44",
+    "author": "Oscar Hoffman",
+    "rating": 5,
+    "date": "July 22, 2025",
+    "text": "Switched from ClickUp with my team, I work alot with manual device testing and Linear Android and Apple apps are supernice since everything happens instantly on all devices. I find that the flow for creating new issues works well however I miss the function to use the camera when making attachments to issues.",
+    "helpful_count": 2,
+    "developer_response_date": "July 25, 2025",
+    "developer_response_text": "Thanks for this feedback! We've filed a feature request for supporting direct photo attachments from the camera when creating issues on the app."
+  },
+  {
+    "review_id": "f8c83394-8972-4ef2-a0f2-29504f31357a",
+    "author": "David Schulten",
+    "rating": 5,
+    "date": "September 4, 2025",
+    "text": "Love the App to check some notifications and create simple tickets on the go.",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "499461b4-25be-4dbe-9bb7-3d8ece73ae9d",
+    "author": "Rifqi Oktario",
+    "rating": 5,
+    "date": "July 3, 2025",
+    "text": "nice user interface and experience, so fluid love it. The web version is a little bit stiff tho I guess every NextJs app is behaved like that. But overall no problem at all",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "a3920792-0dc2-436e-a864-caa189fef643",
+    "author": "Jake Dube",
+    "rating": 4,
+    "date": "August 20, 2025",
+    "text": "Very slow/buggy rn on android, hopefully will get up to the standard of the desktop tooling soon.",
+    "helpful_count": 0,
+    "developer_response_date": "August 20, 2025",
+    "developer_response_text": "Thanks for flagging, that doesn't sound like the behavior we expect. Could you please share any bugs you're experiencing to support@linear.app? We'd consider slowness buggy as well so the more details you can share the better equipped we'll be to make improvements!"
+  },
+  {
+    "review_id": "f0f2c4c9-da68-4dc4-ba67-976db14d9a9a",
+    "author": "Franco Laiuppa",
+    "rating": 5,
+    "date": "June 28, 2025",
+    "text": "incredible app, just like the web version. the ux is so clear it doesn't even need the classic intro popups . love it!!",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "6cc2c00c-75ec-4115-a681-760e836c87bc",
+    "author": "Sumit M",
+    "rating": 4,
+    "date": "June 27, 2025",
+    "text": "we really need the create more checkbox for creating new issues in the mobile app!! if we're doing mobile testing it's much easier to log bugs from the linear mobile app.",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Thanks for the feedback, makes sense! We'll consider this for the future."
+  },
+  {
+    "review_id": "e601a58d-b75c-4d19-b260-2be1f090150f",
+    "author": "Ron Gorai",
+    "rating": 4,
+    "date": "August 18, 2025",
+    "text": "Works well, but missing a lot of functionality from the web version",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "21b2f294-601d-4c16-afcc-2f04b745fc4b",
+    "author": "Joseph Oladokun",
+    "rating": 4,
+    "date": "September 3, 2025",
+    "text": "I've found this application very useful. I hope to get more integrations in time to come.",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "9127ba1d-67b6-46c4-8a24-3165278a3013",
+    "author": "Yuri Petusko",
+    "rating": 5,
+    "date": "April 22, 2025",
+    "text": "Simple and to the point, I mostly use it as a complimentary app to Linear desktop, but it does its job really well. Linear knows what is a good UX",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "b5ff4873-1efe-4b5a-8adb-b6681344ceb8",
+    "author": "Robert Kibet",
+    "rating": 3,
+    "date": "May 23, 2025",
+    "text": "incomparable to the Desktop version, appreciate that you can atleast react and comment on pending tickets, but generally the desktop app is miles clear in terms of useability",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "f5967a06-f2e2-4360-8f6b-8efee21420e1",
+    "author": "Rutvik Mehta",
+    "rating": 3,
+    "date": "January 13, 2025",
+    "text": "The app still lacks so many features from the actual web version. Also sometimes the comments and other changes/actions are not syncing to the server instantly even if the network connection is stable. The sync status should always be shown somewhere on all the pages. Or there should be an alert message coming on top that sync is pending. If possible please give pull to refresh on every screens. Thank you. I hope my review will help. I really like Liner 🫶🏻",
+    "helpful_count": 1,
+    "developer_response_date": "January 22, 2025",
+    "developer_response_text": "Hi Rutvik, thanks for the feedback! The problems you noticed around comments not syncing instantly should now be fixed. If you can still reproduce on the latest version, please let us know at support@linear.app."
+  },
+  {
+    "review_id": "fb668ac7-d5e7-4f06-aa1e-2db4278ff55a",
+    "author": "Ebuka Odini",
+    "rating": 4,
+    "date": "July 14, 2025",
+    "text": "The best tool for product development. Please add support to manage projects from the mobile",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "fb067e23-46ce-48e0-8b84-9dec5ec590df",
+    "author": "Anish Gandhi",
+    "rating": 5,
+    "date": "September 17, 2025",
+    "text": "Love it! Highly recommended for project management.",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "52ef768d-d7d3-48f1-9f36-927b21063052",
+    "author": "Sugat Sujakhu",
+    "rating": 1,
+    "date": "April 24, 2025",
+    "text": "I have one complaint about the app. The notification system in the app is really trash. I never get notifications of task creation or assignment. The notification of other workspaces is nowhere to be found. Yes I have set notification on in settings and of every project still I have to rely on either mail or slack notification bot. Please fix it",
+    "helpful_count": 2,
+    "developer_response_date": "April 25, 2025",
+    "developer_response_text": "Thank you for the feedback and I'm sorry you're having trouble. If you reach out to support@linear.app, we'd be happy to troubleshoot this further. It would be helpful to know which version of Play Services is on your phone. This link will help you find that info. https://support.google.com/googleplay/answer/9037938?hl=en."
+  },
+  {
+    "review_id": "82627012-44cb-4e3f-8a38-527612ae42d2",
+    "author": "Alireza Nick",
+    "rating": 5,
+    "date": "July 9, 2025",
+    "text": "perfect, just please support rtl for Asian region",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "ef3e134c-85d2-46a2-864b-90aaca46116d",
+    "author": "Marko Röder",
+    "rating": 1,
+    "date": "November 7, 2024",
+    "text": "I was super excited to see this app being built. Unfortunately, I'm unable to login as the app itself has no login form. The redirect to the browser to log in works but, after logging in, there is no redirect back to the app which means no possibility to log into the app. Without actually building a proper login flow into the app and scrapping that poor redirect experience, this app is unusable.",
+    "helpful_count": 0,
+    "developer_response_date": "November 11, 2024",
+    "developer_response_text": "Hi Marko, I'm sorry login isn't working for you. Could you reach out to us at support@linear.app with some more information like which browser you are using to help us troubleshoot?"
+  },
+  {
+    "review_id": "329af705-ad8b-4818-84ee-5f43c75e1368",
+    "author": "Samuel",
+    "rating": 5,
+    "date": "July 15, 2025",
+    "text": "Amazing for assigning and organising tasks. Particularly for coding tasks with the GitHub integration",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "026405cc-d513-4153-b9cb-bbb70024f76c",
+    "author": "Javier Dorfsman",
+    "rating": 1,
+    "date": "September 8, 2025",
+    "text": "I can't see any tickets under my views.",
+    "helpful_count": 0,
+    "developer_response_date": "September 12, 2025",
+    "developer_response_text": "That doesn't sound right! Could you please share more details to support@linear.app? We'd be happy to take a look at this."
+  },
+  {
+    "review_id": "11e4dd92-e5f2-4193-95da-e72527f0d176",
+    "author": "Ryan Bright",
+    "rating": 3,
+    "date": "June 16, 2025",
+    "text": "Issue status is constantly stale, and the app doesn't appear to allow seamless cache clearing. Refreshing the status of an issue requires tapping into it and then going back to the issue list - very cumbersome. The app is missing a lot of useful functionality but would make a reasonable read-and-update companion if its content were updated.",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Thanks for reporting this! Issue updates should be real-time at this point -- if you continue to experience otherwise, could you please reach out from within the app's settings page? This should give us some details to help continue troubleshooting."
+  },
+  {
+    "review_id": "567cfcbe-e472-4217-a6f5-ca785566f61a",
+    "author": "Justin Fiedler",
+    "rating": 1,
+    "date": "June 20, 2025",
+    "text": "I love Linear but this app doesn't work. I logged in with my account like 5 times. it keeps asking me to create a workspace rather than joining my existing workspace. No option to join a workspace. Really annoying. Please make this \"just work\" when I sign in.",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Apologies for the login problem! This should not happen as long as you sign in with the credential associated with your account. If you're still reproducing this behavior, could you please let us know by opening Settings inside the app, and choosing contact support? This will give us more information we can use to better troubleshoot."
+  },
+  {
+    "review_id": "bcaa8203-9f13-4328-925c-bb984f1c5c25",
+    "author": "Carvier",
+    "rating": 5,
+    "date": "May 15, 2025",
+    "text": "A super great experience from day 1. It's awesome how well designed the app is. I liked the app overall..",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "bee8c122-1613-426f-9c91-36ef13bf891c",
+    "author": "Achille Verheye",
+    "rating": 5,
+    "date": "April 23, 2025",
+    "text": "absolutely excellent. Linear support is top notch - keep it up!",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "ebb1529e-068b-44af-9f55-5a39bb9e920a",
+    "author": "Napo Pоро",
+    "rating": 1,
+    "date": "June 26, 2025",
+    "text": "constant crashes and meaningless errors",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Thanks for letting us know, though I'm sorry for the trouble here! This certainly shouldn't be happening, so we'd be happy to take a look. If you reach out to us from within the app's settings that will help us best troubleshoot this."
+  },
+  {
+    "review_id": "00b2a0ec-599e-4995-b229-c4bca64b860f",
+    "author": "Brendan Strong",
+    "rating": 3,
+    "date": "December 3, 2024",
+    "text": "The PWA version is better. Right now, the app is missing tons of features the web version has. You can adjust the view at all and it gives very limited info right now",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "6c62fec6-9280-44d8-836e-91a1900c26cd",
+    "author": "Jaakko Siren",
+    "rating": 4,
+    "date": "February 14, 2025",
+    "text": "Great! Getting to our default board view is a hard (not sure how to navigate there on mobile, on desktop there's just a direct link in the sidebar) but for checking inbox for notifications it's nice",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "062b1440-d75b-4500-ad2b-8768ab781376",
+    "author": "Joseph Mutumi",
+    "rating": 5,
+    "date": "April 4, 2025",
+    "text": "After taking 10 mins to update an issue, scrolling through to review and scroll too much and all your work is gone for good! Update: Thanks for fixing it!",
+    "helpful_count": 2,
+    "developer_response_date": "November 11, 2024",
+    "developer_response_text": "Thanks for letting us know and we're sorry for the trouble. This is fixed in the next release (1.6.0), but you can pick up this fix even sooner by joining the Beta program."
+  },
+  {
+    "review_id": "409edcfb-416e-4e6d-951a-151339ef999d",
+    "author": "Mlungisi Manyatsi",
+    "rating": 1,
+    "date": "September 23, 2024",
+    "text": "I installed, tried to sign up with Google and it told me \"Account doesn't exist. Please sign up on desktop\" Which is something I could do but, I won't because I find it hilarious that I can't create an account on mobile It's a shame I have to uninstall the app because it'll be no use to me. I was really exited about trying it out and now I'll miss out because of this.",
+    "helpful_count": 0,
+    "developer_response_date": "September 24, 2024",
+    "developer_response_text": "Hi, thanks for leaving this feedback though I'm sorry for the frustration here. We'll consider what workspace creation from mobile could look like moving forwards!"
+  },
+  {
+    "review_id": "a55b0010-555b-4e6e-b9d3-b8ab94dbf9db",
+    "author": "Juan Rivera",
+    "rating": 1,
+    "date": "September 20, 2024",
+    "text": "The side loaded app was better, it let you toggle board view. This one you have to scroll endlessly if there are tons of tickets in one column, so you spend more time going column to column to find what you're looking for.",
+    "helpful_count": 1,
+    "developer_response_date": "September 20, 2024",
+    "developer_response_text": "Hi Juan, appreciate the feedback. Board view for the native app may be something we consider for the future, but didn't make it into the first version."
+  },
+  {
+    "review_id": "4b750a41-7097-4bfb-b323-6a2d86e8ac53",
+    "author": "Paul Mbingu",
+    "rating": 3,
+    "date": "July 16, 2025",
+    "text": "The web app is far superior to this version. It offers the full range of features and functionality found in the desktop application, while this one feels incomplete and lacks many essential capabilities.",
+    "helpful_count": 0,
+    "developer_response_date": "July 17, 2025",
+    "developer_response_text": "Thanks for this feedback! It's true that the mobile app is not designed to copy all functionality from the desktop application. Which specific capabilities were you hoping to see? Please let us know at support@linear.app so we can consider your thoughts for future updates."
+  },
+  {
+    "review_id": "a52b75c2-8d22-4d5a-8c74-0c5a8aa1df60",
+    "author": "Костя Б",
+    "rating": 1,
+    "date": "September 7, 2025",
+    "text": "could not login with Google SSO",
+    "helpful_count": 0,
+    "developer_response_date": "September 12, 2025",
+    "developer_response_text": "Hi, thanks for flagging though I'm sorry for the trouble. It'd be helpful to know more specifically what you're seeing if you're able to share with us. Emailing support@linear.app is the best way to continue the conversation."
+  },
+  {
+    "review_id": "33d1d0a8-bf44-4968-b7a1-7363b31db772",
+    "author": "Konstantin Levinski",
+    "rating": 5,
+    "date": "November 21, 2024",
+    "text": "Amazing issue tracker, highly recommend. Automatic sync with repo, all context is there, UX is great, speed instant.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "53e214a0-7c52-4af6-bf09-a08d53b39450",
+    "author": "Mateus Furquim",
+    "rating": 5,
+    "date": "October 19, 2024",
+    "text": "Great App! I've been using the Web App for quite some time now, and it's helped me organize all my projects. The Mobile App is really simple and intuiti to use.",
+    "helpful_count": 2,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "193d4773-bf2f-4dee-9832-902bc2ac3ffe",
+    "author": "James Martin",
+    "rating": 4,
+    "date": "January 29, 2025",
+    "text": "Great app, fast and lets me work from anywhere! Obviously not at feature parity with desktop so hence the four stars. Really looking forward to future updates!",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "8e327f74-39d5-422b-9e75-0d074e73ea45",
+    "author": "Aman Chabukswar",
+    "rating": 1,
+    "date": "December 1, 2024",
+    "text": "There is no sign up option. When you select Google sign in, it says this account doesn't exist. How it can exist when you haven't gave Google sign up option.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "177efee3-f1bc-4a4a-a837-024013460576",
+    "author": "Saksham Tandon",
+    "rating": 5,
+    "date": "September 22, 2024",
+    "text": "The app itself opens fastest on my phone, is clean and intuitive. Kudos to the development team, this should be the new standard of native app development",
+    "helpful_count": 8,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "7dcb7df9-9442-4695-9a36-5e6f0b01c27e",
+    "author": "Matthew Urgero",
+    "rating": 4,
+    "date": "January 21, 2025",
+    "text": "Not as featured as the desktop app, but provides sufficient functionality and works great.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "d24a77b7-a477-41f6-9840-1bb40b6f9bdc",
+    "author": "Sverrir Sigurðsson",
+    "rating": 5,
+    "date": "September 25, 2024",
+    "text": "Extremely snappy and has just the right feature set for activities on the go!",
+    "helpful_count": 4,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "f9674c47-b2aa-4c9e-99aa-3a0fd97236be",
+    "author": "Matteo Sanasi",
+    "rating": 4,
+    "date": "January 2, 2025",
+    "text": "I can't create \"projects\" from app(?) Thanks for you answer, I will update the review when the features will be implemented. I love Linear, is a game changer ❤️",
+    "helpful_count": 1,
+    "developer_response_date": "January 2, 2025",
+    "developer_response_text": "Hi Matteo, project creation is not currently supported on our mobile apps. I've flagged for the team this is something you'd like to see in the future."
+  },
+  {
+    "review_id": "e9b47428-1823-4e6e-8569-0ecd024cb15c",
+    "author": "Sergio Peñafiel",
+    "rating": 1,
+    "date": "July 7, 2025",
+    "text": "You can barely do anything with the app. Missing a lot of functionalities",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Hi Sergio, thanks for the feedback. What functionality would you like to see? Please let us know at support@linear.app."
+  },
+  {
+    "review_id": "4c36c2e7-7672-467e-8043-bc89429e7372",
+    "author": "Yiğit Ünlü",
+    "rating": 5,
+    "date": "April 7, 2025",
+    "text": "Can be better but still amazing",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "7bbaf9f8-e7a5-4fa8-865e-7539eec8fb87",
+    "author": "Asad A",
+    "rating": 4,
+    "date": "September 29, 2024",
+    "text": "snappy performance, simple UI/X. Will update to 5 stars once the app allows me to update document 🥲",
+    "helpful_count": 2,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "bfea1cb4-8b08-4468-a731-8611a2b21b06",
+    "author": "Ruurd Moelker",
+    "rating": 4,
+    "date": "February 8, 2025",
+    "text": "Great, although assigning to cycle in this app doesn't actually update the cycle in the web view",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "8289b0c0-9336-4a7d-8637-dc22e6c3962f",
+    "author": "Fabio Nettis",
+    "rating": 5,
+    "date": "February 13, 2025",
+    "text": "Great app, sleek design, great configurability and simple uncluttered UI!",
+    "helpful_count": 4,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "ee6219d5-73d6-4074-a733-db5b1f965434",
+    "author": "Eric Hatt",
+    "rating": 5,
+    "date": "December 13, 2024",
+    "text": "New update made this so much better. The web app is fantastic but the mobile lacked some visibility into projects and now it's there. Thank you for the amazing work.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "46fbd6cb-b6f4-45bb-9b49-8a12af3d52fb",
+    "author": "Bekhruz Sh.",
+    "rating": 5,
+    "date": "February 27, 2025",
+    "text": "just perfect. couldnt find words to describe this product. I love it!",
+    "helpful_count": 3,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "e7033785-151c-4a33-8f0d-c5ddd86075ca",
+    "author": "Rafael Ribeiro",
+    "rating": 5,
+    "date": "February 4, 2025",
+    "text": "This product and app are amazing! Way to go for project management.",
+    "helpful_count": 3,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "71b5d8fb-4390-4f71-b770-c85df9713bcd",
+    "author": "Naren Bhandary",
+    "rating": 5,
+    "date": "June 5, 2025",
+    "text": "Beautifully designed product!",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "c70ca269-05f9-4781-8472-406a586a4cba",
+    "author": "Shakeeb",
+    "rating": 1,
+    "date": "June 18, 2025",
+    "text": "Can't login",
+    "helpful_count": 0,
+    "developer_response_date": "July 11, 2025",
+    "developer_response_text": "Thanks for letting us know, though I'm sorry for the trouble here. If you're still seeing a problem here, could you please share further details about what you're seeing or a screen recording to support@linear.app? We'd be happy to help troubleshoot what may be going wrong."
+  },
+  {
+    "review_id": "f854535e-0691-4cbe-875f-ed04252e9b2c",
+    "author": "Ritesh Mishra",
+    "rating": 5,
+    "date": "October 10, 2024",
+    "text": "Good to have an app to track my work anytime anywhere... :)",
+    "helpful_count": 2,
+    "developer_response_date": "October 10, 2024",
+    "developer_response_text": "Hi, thank you for your feedback and sorry for the trouble. This should be fixed in the current release. If you are still seeing this issue, please reach out to us at support@linear.app."
+  },
+  {
+    "review_id": "7f3b449f-ac18-44ff-a556-42b137cba827",
+    "author": "Ravi",
+    "rating": 3,
+    "date": "April 18, 2025",
+    "text": "Can't edit comments",
+    "helpful_count": 0,
+    "developer_response_date": "November 4, 2024",
+    "developer_response_text": "Thanks for the feedback, though I'm sorry for the trouble! We recently added edit comment functionality; long-pressing a comment you wrote should pull up a menu with an edit option. If do you still not see this behavior after quitting and restarting the app, please let us know at support@linear.app so we can take a closer look."
+  },
+  {
+    "review_id": "c5dace10-aecd-4885-886f-27c9c2cc0c18",
+    "author": "noah guillen",
+    "rating": 5,
+    "date": "December 6, 2024",
+    "text": "Fantastic application, runs very quickly, and is designed with functionality in mind everywhere.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "9b4ebb41-ed79-4685-8a89-e7f0d04f703e",
+    "author": "Pratik Pawar",
+    "rating": 5,
+    "date": "June 11, 2025",
+    "text": "very good tool for personal project management",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "0c484d45-4e8b-4f6e-9cde-d3b8f17d856e",
+    "author": "Jayson Lindsley",
+    "rating": 5,
+    "date": "September 20, 2024",
+    "text": "Simple and fast.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "7c04f32d-cf26-406b-855c-dd2a9267b0b7",
+    "author": "Adam Slamani",
+    "rating": 5,
+    "date": "November 19, 2024",
+    "text": "Best place to converge all my ideas over multiple projects",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "efc5bd4d-1b20-4e69-bbbc-44303aa1ba42",
+    "author": "Luna Prasol",
+    "rating": 3,
+    "date": "March 28, 2025",
+    "text": "mibile app lacks features",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "99f2206c-6a5b-4ef6-982d-7a52871e47c0",
+    "author": "Matt Sasso",
+    "rating": 5,
+    "date": "March 7, 2025",
+    "text": "Fast. Easy to use. Love linear",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "f214e76d-8ebe-4655-bded-6687a5c785b3",
+    "author": "Me",
+    "rating": 1,
+    "date": "March 26, 2025",
+    "text": "purposeless and awful login experience through delayed emails",
+    "helpful_count": 0,
+    "developer_response_date": "March 28, 2025",
+    "developer_response_text": "We're sorry to hear about your frustrating login experience! If you're still having this problem, could you let us know at support@linear.app? We'd be happy to take a look."
+  },
+  {
+    "review_id": "cad51f0e-87a3-4884-adce-f492a651e2f7",
+    "author": "Matias Wainsten",
+    "rating": 1,
+    "date": "January 21, 2025",
+    "text": "Non-native login. literally the only reason why i would install the app",
+    "helpful_count": 0,
+    "developer_response_date": "January 22, 2025",
+    "developer_response_text": "Hi Matias, by \"non-native login\" do you mean that you're being brought to Linear in a browser, not the application when you login? If so, more information about how/when you see this would be very helpful if you can share at support@linear.app."
+  },
+  {
+    "review_id": "9cbb13cd-9769-4abf-b1a6-91f1d26a5d42",
+    "author": "Rares Cruceat",
+    "rating": 5,
+    "date": "October 20, 2024",
+    "text": "Perfect managing tool for apps",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "09a1e5d2-8d99-4c34-b0a8-8ca38d42a447",
+    "author": "Harshit Dev",
+    "rating": 5,
+    "date": "September 26, 2024",
+    "text": "Thanks for this, it was much needed",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "e0657585-b189-4312-a6c0-e688efb85062",
+    "author": "F - Lan",
+    "rating": 1,
+    "date": "March 8, 2025",
+    "text": "Why should i register forst before having a feel of the app?",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "bf064d85-264a-403e-8b40-1ea5ae55edde",
+    "author": "Hannah Santhe",
+    "rating": 1,
+    "date": "January 21, 2025",
+    "text": "Can't even log in",
+    "helpful_count": 0,
+    "developer_response_date": "January 22, 2025",
+    "developer_response_text": "Hi Hannah, thanks for letting us know! We'd like to help with this; could you please email us at support@linear.app so we can take a closer look?"
+  },
+  {
+    "review_id": "25a30a47-21ab-411b-b853-7615aebdf885",
+    "author": "Loveof567 Code.exfitruso",
+    "rating": 5,
+    "date": "September 20, 2024",
+    "text": "Golden. That's all I have to say.",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "a20f044a-2eaa-4ba9-b808-1fafa3015e09",
+    "author": "Kash Robinson",
+    "rating": 5,
+    "date": "September 6, 2025",
+    "text": "badass app",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "a1218fd1-4e75-4f85-9542-4ee1bc93599a",
+    "author": "Paulo Carneiro",
+    "rating": 5,
+    "date": "August 13, 2025",
+    "text": "The Best 🇧🇷 🚀",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "4671d6fc-817d-4840-ba6a-b06e2ca9ecdf",
+    "author": "Bharath Raja",
+    "rating": 5,
+    "date": "June 15, 2025",
+    "text": "This is a beautifully well thought out product. As a developer, it's one of those systems I love so much, that I ache to work with the team that built such a beautiful software ❤️",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "bcad2cc4-3565-4857-b8c8-d347cefd5a62",
+    "author": "Emil Elgaard",
+    "rating": 5,
+    "date": "June 5, 2025",
+    "text": "pretty good",
+    "helpful_count": 0,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "3ca8ee12-30b3-43b8-a0f9-cfea62b87aa4",
+    "author": "NAUFAL FIFA",
+    "rating": 5,
+    "date": "February 16, 2025",
+    "text": "nice",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "69f2d7e5-4464-40d5-ac90-06daa18e4d1c",
+    "author": "Ramazon Pardayev",
+    "rating": 5,
+    "date": "January 26, 2025",
+    "text": "Good",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "ff384668-2897-426a-84ee-aaeec29d027c",
+    "author": "Kwagala Trevor",
+    "rating": 5,
+    "date": "January 11, 2025",
+    "text": "Amazing",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "f1ff1aa4-ca66-4d8f-b7a2-847ebb51d733",
+    "author": "nitin bhati",
+    "rating": 5,
+    "date": "December 13, 2024",
+    "text": "Nice aap",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "150b1e1b-def5-4075-9724-91eddde36c77",
+    "author": "J X",
+    "rating": 5,
+    "date": "November 12, 2024",
+    "text": "first!",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "4c1aaf98-791f-498e-8396-d9a2322a71d0",
+    "author": "New Jersey Management",
+    "rating": 5,
+    "date": "September 24, 2024",
+    "text": "This app is the deal! Once you use it, you'll not look back into the past 💯 😉",
+    "helpful_count": 2,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "7cc2747b-0555-47da-81ea-c97ca5890ad5",
+    "author": "Begench Muhammetberdiyew",
+    "rating": 5,
+    "date": "October 22, 2024",
+    "text": "Great",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "ab501fbc-3beb-4a95-a637-bed809ef2326",
+    "author": "Martin Charles",
+    "rating": 5,
+    "date": "September 21, 2024",
+    "text": "Beautiful app, great product Really well designed, thanks for making this thing awesome. I use it every day and it helps me keep my execution organized.",
+    "helpful_count": 4,
+    "developer_response_date": null,
+    "developer_response_text": null
+  },
+  {
+    "review_id": "03fe9fc4-3894-4e8f-b3e2-211064214df8",
+    "author": "Martin Cura",
+    "rating": 5,
+    "date": "September 19, 2024",
+    "text": "Stellar",
+    "helpful_count": 1,
+    "developer_response_date": null,
+    "developer_response_text": null
+  }
+]
