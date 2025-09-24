@@ -501,8 +501,8 @@ export async function scrapeTwitterPosts(profileHandle: string): Promise<any[]> 
 }
 
 // ----------------- Legacy Main Function (for backwards compatibility) -----------------
-async function run() {
-  const profileHandle = "google"; // Default profile for legacy usage
+async function run(company) {
+  const profileHandle = company; // Default profile for legacy usage
   
   try {
     const results = await scrapeTwitterPosts(profileHandle);
@@ -521,5 +521,8 @@ async function run() {
 
 // Run if called directly
 if (require.main === module) {
-  run();
+  run("Tesla").catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
 }
