@@ -399,16 +399,34 @@ async function scrapeTweetPage(context: BrowserContext, tweetObj: { url: string;
 
     return {
       url: tweetObj.url,
-      Post: mainTweet.trim(),
-      Likes: tweetObj.likes,
-      Comments: Array.from(commentMap.values()).slice(0, MAX_COMMENTS_PER_POST)
+      text: mainTweet.trim(),
+      dateRaw: '',
+      dateISO: new Date().toISOString().split('T')[0],
+      likesRaw: tweetObj.likes,
+      likesNumeric: convertAbbreviatedToNumber(tweetObj.likes),
+      commentsRaw: String(commentMap.size),
+      commentsNumeric: commentMap.size,
+      sharesRaw: '0',
+      sharesNumeric: 0,
+      mediaType: 'Unknown',
+      mediaLink: '',
+      comments: Array.from(commentMap.values()).slice(0, MAX_COMMENTS_PER_POST)
     };
   } catch (error) {
     return {
       url: tweetObj.url,
-      Post: 'Error loading tweet',
-      Likes: tweetObj.likes,
-      Comments: []
+      text: 'Error loading tweet',
+      dateRaw: '',
+      dateISO: new Date().toISOString().split('T')[0],
+      likesRaw: tweetObj.likes,
+      likesNumeric: convertAbbreviatedToNumber(tweetObj.likes),
+      commentsRaw: '0',
+      commentsNumeric: 0,
+      sharesRaw: '0',
+      sharesNumeric: 0,
+      mediaType: 'Unknown',
+      mediaLink: '',
+      comments: []
     };
   } finally {
     await page.close();
@@ -501,7 +519,7 @@ export async function scrapeTwitterPosts(profileHandle: string): Promise<any[]> 
 }
 
 // ----------------- Legacy Main Function (for backwards compatibility) -----------------
-async function run(company) {
+async function run(company: string) {
   const profileHandle = company; // Default profile for legacy usage
   
   try {
@@ -526,3 +544,4 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
