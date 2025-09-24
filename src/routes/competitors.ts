@@ -95,7 +95,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
           
           console.log(`Successfully scraped ${scraperData.length} posts for ${name}`);
           
-          // Step 2: Analyze with Gemini
+          // Step 3: Analyze with Gemini
           const analysisResult = await analyzeCompetitorData({
             dataset: scraperData,
           });
@@ -108,12 +108,11 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     competitorId: competitor.competitor_id,
                     analysisData: validatedResult
                   });
-                  
-            
-        console.log(`Analysis data inserted.`);    
-  
-          
-          return reply.code(201).send({
+
+
+        console.log(`Analysis data inserted.`, insertResponse);
+
+          return reply.code(200).send({
             success: true,
             data: competitor,
             analysis: {
