@@ -7,14 +7,14 @@
  *   npx tsx src/g2-scraper-stealth.ts
  */
 
-import { chromium } from 'playwright';
+import { chromium } from "playwright";
 
 async function run() {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto('https://www.g2.com', {timeout: 60000 });
+  await page.goto("https://www.linkedinflow.com", { timeout: 60000 });
 
   await page.waitForTimeout(60000);
 
@@ -23,7 +23,7 @@ async function run() {
 
 if (require.main === module) {
   run().catch((err) => {
-    console.error('Failed:', err);
+    console.error("Failed:", err);
     process.exit(1);
   });
 }

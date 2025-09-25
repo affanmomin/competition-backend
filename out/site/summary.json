@@ -1,0 +1,31 @@
+{
+  "scrapedAt": "2025-09-25T12:45:08.660Z",
+  "mode": "fast",
+  "targetUrl": "https://www.attherate.ai",
+  "finalUrl": "https://www.attherate.ai/",
+  "statusCode": 200,
+  "title": "Be an AI-dvertising Agency I Digital Agency OS",
+  "description": "The platform for media agencies managing client accounts. Helping to streamline campaigns, optimize performance, and drive results with powerful tools tailored for agency needs. Drive your clients success with ease and efficiency.",
+  "linkStats": {
+    "total": 13,
+    "internal": 9,
+    "external": 4
+  },
+  "sampleInternalLinks": [
+    "https://www.attherate.ai/",
+    "https://www.attherate.ai/solutions-18march",
+    "https://www.attherate.ai/blog",
+    "https://www.attherate.ai/about",
+    "https://www.attherate.ai/contact",
+    "https://www.attherate.ai/#w-tabs-0-data-w-pane-0",
+    "https://www.attherate.ai/#w-tabs-0-data-w-pane-1",
+    "https://www.attherate.ai/#w-tabs-0-data-w-pane-2",
+    "https://www.attherate.ai/solutions"
+  ],
+  "sampleExternalLinks": [
+    "https://dev.attherate.ai/login",
+    "https://www.facebook.com/profile.php?id=61572106013965",
+    "https://www.instagram.com/attherateai/",
+    "http://linkedin.com/company/attherate-ai"
+  ]
+}
