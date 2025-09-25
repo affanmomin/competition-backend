@@ -2,7 +2,13 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import client from "../db";
 import { scrapeCompanyPosts } from "../linkedin-scraper";
 import { scrapeTwitterPosts } from "../twitter-scraper";
-import { analyzeCompetitorData } from "../services/gemini-service";
+import { scrapeCompanyWebsite } from "../website-scraper";
+import { scrapeGoogleMapsData } from "../google-maps-scraper";
+import { scrapeGoogleBusinessData } from "../google-business-scraper";
+import {
+  analyzeCompetitorData,
+  analyzeWebpageData,
+} from "../services/gemini-service";
 import * as fs from "fs-extra";
 import * as path from "path";
 import { CompetitorAnalysisResponseSchema } from "../schemas/gemini-schemas";
@@ -100,22 +106,48 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             let allScrapedData: any[] = [];
             const TWITTER_SOURCE_ID = "5d53c057-6e63-47c6-9301-192a3b9fa1d4";
             const LINKEDIN_SOURCE_ID = "4a267045-dbfc-432c-96a5-17a9da542248";
+            const WEBSITE_SOURCE_ID = "da6acd0d-7b5e-4aec-8d0c-9126220a8341";
+            const GOOGLE_MAPS_SOURCE_ID =
+              "8e7857f1-d153-4470-bd6a-cf4ad79bb8fe";
+            const GOOGLE_BUSINESS_SOURCE_ID =
+              "4ee3988d-70a4-4dd4-8708-5441de698a38";
 
             // Process each source ID
             for (const sourceId of source_ids) {
               let scraperData: any[] = [];
-              
+
               switch (sourceId) {
                 case TWITTER_SOURCE_ID:
                   console.log(`Starting Twitter scraping for company: ${name}`);
                   scraperData = await scrapeTwitterPosts(name);
                   break;
-                  
+
                 case LINKEDIN_SOURCE_ID:
-                  console.log(`Starting LinkedIn scraping for company: ${name}`);
+                  console.log(
+                    `Starting LinkedIn scraping for company: ${name}`,
+                  );
                   scraperData = await scrapeCompanyPosts(name);
                   break;
-                  
+
+                case WEBSITE_SOURCE_ID:
+                  console.log(`Starting website scraping for company: ${name}`);
+                  scraperData = await scrapeCompanyWebsite(name);
+                  break;
+
+                case GOOGLE_MAPS_SOURCE_ID:
+                  console.log(
+                    `Starting Google Maps scraping for company: ${name}`,
+                  );
+                  scraperData = await scrapeGoogleMapsData(name);
+                  break;
+
+                case GOOGLE_BUSINESS_SOURCE_ID:
+                  console.log(
+                    `Starting Google Business scraping for company: ${name}`,
+                  );
+                  scraperData = await scrapeGoogleBusinessData(name);
+                  break;
+
                 default:
                   console.warn(`Unknown source ID: ${sourceId}`);
                   continue;
@@ -123,9 +155,13 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
 
               if (scraperData && scraperData.length > 0) {
                 allScrapedData.push(...scraperData);
-                console.log(`Successfully scraped ${scraperData.length} posts from source ${sourceId} for ${name}`);
+                console.log(
+                  `Successfully scraped ${scraperData.length} posts from source ${sourceId} for ${name}`,
+                );
               } else {
-                console.warn(`No data found for source ${sourceId} and company: ${name}`);
+                console.warn(
+                  `No data found for source ${sourceId} and company: ${name}`,
+                );
               }
             }
 
@@ -133,7 +169,8 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
               return reply.code(201).send({
                 success: true,
                 data: competitor,
-                warning: "Competitor created but no data found from any source. Company may not exist on the specified platforms or scraping failed.",
+                warning:
+                  "Competitor created but no data found from any source. Company may not exist on the specified platforms or scraping failed.",
               });
             }
 
@@ -171,7 +208,13 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             console.error("Error during scraping/analysis:", scrapingError);
 
             // Return success for competitor creation but with scraping error
-            if (scrapingError.message?.includes("Twitter") || scrapingError.message?.includes("LinkedIn")) {
+            if (
+              scrapingError.message?.includes("Twitter") ||
+              scrapingError.message?.includes("LinkedIn") ||
+              scrapingError.message?.includes("website") ||
+              scrapingError.message?.includes("Google Maps") ||
+              scrapingError.message?.includes("Google Business")
+            ) {
               return reply.code(201).send({
                 success: true,
                 data: competitor,
@@ -228,9 +271,8 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
         });
       }
     },
-  ); 
-  
-  
+  );
+
   // Get competitors
   fastify.get<{ Querystring: CompetitorQuery }>(
     "/api/competitors",
