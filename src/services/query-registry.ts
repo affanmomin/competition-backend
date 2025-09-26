@@ -156,6 +156,26 @@ export const queryRegistry: Record<string, QueryConfig> = {
     `,
     chartType: 'bar'
   },
+  'top-features-short': {
+  key: 'top-features-short',
+  title: 'Top 5 Features',
+  description: 'Top 5 features by competitor',
+  query: `
+    SELECT
+      f.canonical AS name,
+      'Features' AS label,
+      COUNT(*) AS value
+    FROM features f
+    JOIN competitors c ON c.competitor_id = f.competitor_id
+    WHERE c.user_id = $1
+      AND ($2::timestamp is null OR f.last_updated >= $2)
+      AND ($3::timestamp is null OR f.last_updated < $3)
+    GROUP BY f.canonical
+    ORDER BY value DESC
+    LIMIT 5;
+  `,
+  chartType: 'bar'
+},
 'top-features': {
   key: 'top-features',
   title: 'Top Features',
@@ -364,27 +384,46 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY mentions DESC
       LIMIT 20;
     `,
-    chartType: 'bar'
+    chartType: 'bar',
   },
-  'alternatives-trend': {
-    key: 'alternatives-trend',
-    title: 'Alternatives Trend',
-    description: 'Alternatives trend by day',
+  'top-alternatives-short': {
+    key: 'top-alternatives-short',
+    title: 'Top 5 Alternatives',
+    description: 'Top 5 alternatives',
     query: `
-      SELECT
-        date_trunc('day', a.last_updated)::timestamptz AS date,
-        SUM(a.mentions_count) AS value,
-        a.name AS label
+      SELECT a.name AS alternative,
+             SUM(a.mentions_count) AS mentions
       FROM alternatives a
       JOIN competitors c ON c.competitor_id = a.competitor_id
       WHERE c.user_id = $1
-        AND a.last_updated >= $2
-        AND a.last_updated < $3
-      GROUP BY 1, a.name
-      ORDER BY 1, a.name;
+        AND ($2::timestamp is null OR true)
+        AND ($3::timestamp is null OR true)
+      GROUP BY a.name
+      ORDER BY mentions DESC
+      LIMIT 5;
     `,
-    chartType: 'line'
+    chartType: 'bar'
   },
+  'top-complaints-short': {
+  key: 'top-complaints-short',
+  title: 'Top 5 Complaints',
+  description: 'Top 5 complaints',
+  query: `
+    SELECT
+      comp.canonical AS name,
+      'Complaints' AS label,
+      COUNT(*) AS value
+    FROM complaints comp
+    JOIN competitors c ON c.competitor_id = comp.competitor_id
+    WHERE c.user_id = $1
+      AND ($2::timestamp is null OR true)
+      AND ($3::timestamp is null OR true)
+    GROUP BY comp.canonical
+    ORDER BY value DESC
+    LIMIT 5;
+  `,
+  chartType: 'bar'
+},
   'leads-over-time': {
     key: 'leads-over-time',
     title: 'Leads Over Time',
