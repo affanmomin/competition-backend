@@ -1,271 +1,206 @@
-// @ts-nocheck
-/**
- * google-maps-scraper.ts
- * Scrapes Google Maps reviews for businesses
- * Converts google-map.ts into a reusable function
- */
+//@ts-nocheck
+import {
+  chromium,
+  Page,
+  ElementHandle,
+  BrowserContext,
+  Browser,
+} from "playwright";
+import * as fs from "fs-extra";
+import * as path from "path";
+import { format as csvFormat } from "@fast-csv/format";
+import {
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  format as dfFormat,
+} from "date-fns";
 
-import { chromium, Page } from "playwright";
+const REVIEW_LIMIT = parseInt(process.env.REVIEW_LIMIT || "20", 10);
 
-const REVIEW_LIMIT = parseInt(process.env.REVIEW_LIMIT || "50", 10);
-
-function pause(min = 1000, max = 2000) {
+// Random pause
+function pause(min = 500, max = 1500) {
   return new Promise((resolve) =>
     setTimeout(resolve, Math.random() * (max - min) + min),
   );
 }
 
-/**
- * Scrapes Google Maps reviews for a business
- * @param businessName - The business name to search for
- * @returns Array of structured review data
- */
-export async function scrapeGoogleMapsReviews(
-  businessName: string,
-): Promise<any[]> {
-  const browser = await chromium.launch({
-    headless: false,
-    proxy: {
-      server: "http://gw.dataimpulse.com:823",
-      username: "2cef711aaa1a060b00b2",
-      password: "71e56626760e1077",
-    },
+// Human-like typing
+async function typeSlow(page, selector, text) {
+  for (const char of text) {
+    await page.type(selector, char, { delay: 100 + Math.random() * 100 });
+    await pause(50, 150);
+  }
+}
+
+export async function scrapeGoogleMapsData(targetPlace: string) {
+  const browser = await chromium.launch({ headless: false, slowMo: 50 });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
   });
-  const context = await browser.newContext();
   const page = await context.newPage();
 
   try {
-    console.log(`🌍 Opening Google Maps for: ${businessName}`);
+    console.log("🌍 Opening Google Maps...");
     await page.goto("https://www.google.com/maps", {
       waitUntil: "domcontentloaded",
     });
 
-    // Handle consent popup if it appears
+    // Handle consent popup
     try {
       const consentBtn = page.locator("button:has-text('Accept all')");
       if (await consentBtn.isVisible({ timeout: 5000 })) {
+        await page.mouse.move(100, 100); // move mouse
+        await pause(500, 1000);
         await consentBtn.click();
         console.log("✅ Accepted consent popup");
       }
     } catch {}
 
-    console.log(`🔎 Searching for: ${businessName}`);
-    await page.fill("input#searchboxinput", businessName);
+    console.log(`🔎 Searching for: ${targetPlace}`);
+    await page.mouse.move(200, 200);
+    await pause(300, 600);
+    await typeSlow(page, "input#searchboxinput", targetPlace);
+    await pause(300, 600);
     await page.press("input#searchboxinput", "Enter");
 
-    console.log("⏳ Waiting for sidebar to load...");
+    // Click the first search result from the left sidebar
+    try {
+      console.log("⏳ Waiting for search results...");
+      const firstResult = page
+        .locator('div[role="article"].Nv2PK:has(a.hfpxzc)')
+        .first();
+      const firstAlt = page.locator('div[role="feed"] div.Nv2PK').first();
 
-    // Wait for search results
-    await page.waitForSelector(".m6QErb", { timeout: 20000 });
-    await pause(2000, 3000);
+      await Promise.race([
+        firstResult
+          .waitFor({ state: "visible", timeout: 20000 })
+          .catch(() => null),
+        firstAlt
+          .waitFor({ state: "visible", timeout: 20000 })
+          .catch(() => null),
+      ]);
 
-    // Look for the Reviews button - try multiple selectors
-    let reviewsBtn = null;
-    const reviewsSelectors = [
-      'button:has(div.Gpq6kf.NlVald:has-text("Reviews"))',
-      'button[data-value="Reviews"]',
-      'button:has-text("Reviews")',
-      'div[role="tab"]:has-text("Reviews")',
-    ];
-
-    for (const selector of reviewsSelectors) {
-      try {
-        reviewsBtn = page.locator(selector);
-        if ((await reviewsBtn.count()) > 0) {
-          break;
-        }
-      } catch {}
-    }
-
-    if (!reviewsBtn || (await reviewsBtn.count()) === 0) {
-      throw new Error(
-        "Could not find Reviews button - business may not exist or have no reviews",
-      );
-    }
-
-    console.log("📝 Clicking on Reviews...");
-    await reviewsBtn.first().click();
-    await pause(2000, 3000);
-
-    // Locate scrollable reviews container - try multiple selectors
-    let scrollable = null;
-    const scrollableSelectors = [
-      "div.m6QErb.DxyBCb.kA9KIf.dS8AEf",
-      "div.m6QErb",
-      ".review-scroll-container",
-      "[data-reviewid]",
-    ];
-
-    for (const selector of scrollableSelectors) {
-      try {
-        scrollable = page.locator(selector);
-        if ((await scrollable.count()) > 0) {
-          break;
-        }
-      } catch {}
-    }
-
-    if (!scrollable || (await scrollable.count()) === 0) {
-      throw new Error("Could not find scrollable reviews container");
-    }
-
-    await scrollable.first().waitFor({ state: "visible", timeout: 15000 });
-
-    console.log("⬇️ Scrolling and scraping reviews...");
-    let reviews: any[] = [];
-    let retries = 0;
-    const maxRetries = 15;
-
-    while (reviews.length < REVIEW_LIMIT && retries < maxRetries) {
-      // Scroll down in the reviews container
-      await scrollable
-        .first()
-        .evaluate((el) => el.scrollBy(0, el.scrollHeight));
-      await pause(1500, 2500);
-
-      // Extract reviews incrementally - try multiple selectors for review cards
-      const reviewSelectors = [
-        "div.jftiEf",
-        "div[data-review-id]",
-        ".review-item",
-        "div.gws-localreviews__google-review",
-      ];
-
-      let newReviews: any[] = [];
-
-      for (const selector of reviewSelectors) {
-        try {
-          newReviews = await page.$$eval(selector, (cards) =>
-            cards.map((card) => {
-              // Try multiple selectors for each field
-              const getTextBySelectorArray = (selectors: string[]) => {
-                for (const sel of selectors) {
-                  const el = card.querySelector(sel);
-                  if (el) return el.textContent?.trim() || null;
-                }
-                return null;
-              };
-
-              const name = getTextBySelectorArray([
-                ".d4r55",
-                ".reviewer-name",
-                ".review-author-name",
-                "[data-reviewer-name]",
-              ]);
-
-              const rating = getTextBySelectorArray([
-                ".kvMYJc",
-                ".review-rating",
-                "[aria-label*='star']",
-                ".stars",
-              ]);
-
-              const text = getTextBySelectorArray([
-                ".wiI7pd",
-                ".review-text",
-                ".review-content",
-                "[data-expandable-text]",
-              ]);
-
-              const date = getTextBySelectorArray([
-                ".rsqaWe",
-                ".review-date",
-                ".review-publish-date",
-                "[data-review-date]",
-              ]);
-
-              // Extract rating number from aria-label if available
-              let ratingNumber = null;
-              if (rating && rating.includes("star")) {
-                const match = rating.match(/(\d+)\s*star/i);
-                if (match) ratingNumber = parseInt(match[1]);
-              }
-
-              return {
-                name,
-                rating: ratingNumber || rating,
-                text: text?.slice(0, 500), // Limit text length
-                date,
-                source: "google_maps",
-                scraped_at: new Date().toISOString(),
-              };
-            }),
-          );
-
-          if (newReviews.length > 0) break;
-        } catch (e) {
-          console.log(`Failed with selector ${selector}:`, e.message);
-        }
+      if (await firstResult.isVisible().catch(() => false)) {
+        await pause(400, 800);
+        await firstResult.click();
+        console.log("✅ Opened first search result (primary)");
+      } else if (await firstAlt.isVisible().catch(() => false)) {
+        await pause(400, 800);
+        await firstAlt.click();
+        console.log("✅ Opened first search result (fallback)");
+      } else {
+        console.log(
+          "⚠️ No visible search result card; proceeding without explicit selection",
+        );
       }
 
-      // Avoid duplicates
-      const existingKeys = new Set(
-        reviews.map((r) => `${r.name}${r.date}${r.text}`),
+      // Give time for place panel to load
+      await pause(1200, 1800);
+    } catch (e) {
+      console.log("⚠️ Could not click first result:", e.message);
+    }
+
+    console.log("⏳ Waiting for sidebar...");
+    const reviewsBtn = page.locator(
+      'button:has(div.Gpq6kf.NlVald:has-text("Reviews"))',
+    );
+    await reviewsBtn.waitFor({ state: "visible", timeout: 20000 });
+
+    console.log("📝 Clicking on Reviews...");
+    await page.mouse.move(300 + Math.random() * 50, 300 + Math.random() * 50);
+    await pause(500, 1000);
+    await reviewsBtn.click();
+    await pause(1500, 2500);
+
+    // Robust scrollable container for reviews, with fallbacks
+    let scrollable = page
+      .locator('div[aria-label*="reviews"], div[aria-label*="Reviews"]')
+      .filter({ has: page.locator("div.jftiEf") })
+      .first();
+
+    if (!(await scrollable.isVisible().catch(() => false))) {
+      scrollable = page
+        .locator("div.m6QErb.DxyBCb")
+        .filter({ has: page.locator("div.jftiEf") })
+        .first();
+    }
+
+    if (!(await scrollable.isVisible().catch(() => false))) {
+      const feed = page.getByRole("feed"); // e.g., Results feed if still on list
+      if (await feed.isVisible().catch(() => false)) {
+        scrollable = feed.first();
+      }
+    }
+
+    await scrollable.waitFor({ state: "visible", timeout: 20000 });
+
+    console.log("⬇️ Scrolling and scraping reviews...");
+    let reviews = [];
+    let retries = 0;
+
+    while (reviews.length < REVIEW_LIMIT && retries < 20) {
+      // Scroll slowly in small steps
+      for (let i = 0; i < 5; i++) {
+        await scrollable.evaluate((el) =>
+          el.scrollBy(0, Math.floor(Math.random() * 100 + 50)),
+        );
+        await pause(400, 800);
+      }
+
+      // Extract reviews incrementally
+      const newReviews = await page.$$eval("div.jftiEf", (cards) =>
+        cards.map((card) => {
+          const name = card.querySelector(".d4r55")?.innerText || null;
+          const rating =
+            card.querySelector(".kvMYJc")?.getAttribute("aria-label") || null;
+          const text = card.querySelector(".wiI7pd")?.innerText || null;
+          const date = card.querySelector(".rsqaWe")?.innerText || null;
+          return { name, rating, text, date };
+        }),
       );
-      for (const review of newReviews) {
-        const key = `${review.name}${review.date}${review.text}`;
-        if (!existingKeys.has(key) && review.name) {
-          reviews.push(review);
-          existingKeys.add(key);
+
+      // Deduplicate
+      const ids = new Set(reviews.map((r) => r.name + r.date + r.text));
+      for (const r of newReviews) {
+        const key = r.name + r.date + r.text;
+        if (!ids.has(key)) {
+          reviews.push(r);
+          ids.add(key);
         }
       }
 
       console.log(`📊 Loaded ${reviews.length} reviews...`);
       retries++;
-
-      // If no new reviews found in several attempts, break
-      if (newReviews.length === 0) {
-        retries += 2; // Penalize no results
-      }
     }
 
-    console.log(
-      `✅ Scraped ${reviews.length} Google Maps reviews for ${businessName}`,
-    );
-    return reviews.slice(0, REVIEW_LIMIT);
-  } catch (error) {
-    console.error(
-      `❌ Google Maps scrape failed for ${businessName}:`,
-      error.message,
-    );
-    throw error;
+    console.log(`✅ Scraped ${reviews.length} reviews`);
+
+    // Return the scraped data instead of writing to file
+    const scrapedData = reviews.slice(0, REVIEW_LIMIT);
+    return scrapedData;
+  } catch (err) {
+    console.error("❌ Scrape failed:", err.message);
+    throw err;
   } finally {
     await browser.close();
   }
 }
 
-/**
- * Scrapes basic business information from Google Maps
- * @param businessName - The business name to search for
- * @returns Array with business info and reviews
- */
-export async function scrapeGoogleMapsData(
-  businessName: string,
-): Promise<any[]> {
-  try {
-    const reviews = await scrapeGoogleMapsReviews(businessName);
+// Allow running as standalone script
+if (require.main === module) {
+  const TARGET_PLACE = process.env.TARGET_PLACE || "titan";
+  const OUTPUT_FILE = path.join(__dirname, "google_reviews.json");
 
-    // Create a summary object with business info
-    const businessInfo = {
-      source: "google_maps",
-      business_name: businessName,
-      total_reviews: reviews.length,
-      average_rating:
-        reviews.length > 0
-          ? reviews.reduce(
-              (sum, r) => sum + (typeof r.rating === "number" ? r.rating : 0),
-              0,
-            ) / reviews.length
-          : null,
-      scraped_at: new Date().toISOString(),
-    };
-
-    return [businessInfo, ...reviews];
-  } catch (error) {
-    console.error(
-      `Error scraping Google Maps data for ${businessName}:`,
-      error,
-    );
-    throw error;
-  }
+  (async () => {
+    try {
+      const reviews = await scrapeGoogleMapsData(TARGET_PLACE);
+      fs.writeFileSync(OUTPUT_FILE, JSON.stringify(reviews, null, 2), "utf-8");
+      console.log(`💾 Saved to ${OUTPUT_FILE}`);
+    } catch (error) {
+      console.error("Script execution failed:", error);
+      process.exit(1);
+    }
+  })();
 }

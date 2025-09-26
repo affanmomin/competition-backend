@@ -14,11 +14,18 @@ import * as path from "path";
 import { CompetitorAnalysisResponseSchema } from "../schemas/gemini-schemas";
 import { insertCompetitorAnalysisData } from "../services/competitor-analysis-service";
 
+interface PlatformData {
+  source_id: string;
+  username?: string; // Platform-specific username or identifier
+}
+
 interface CompetitorBody {
   name: string;
   slug: string;
   user_id: string;
-  source_ids?: string[]; // Array of source UUIDs to link to this competitor
+  platforms?: PlatformData[]; // Array of platform data with source IDs and usernames
+  // Keeping for backward compatibility
+  source_ids?: string[];
 }
 
 interface CompetitorQuery {
@@ -44,12 +51,46 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
       reply: FastifyReply,
     ) => {
       try {
-        const { name, user_id, source_ids } = request.body;
+        const { name, user_id, source_ids, platforms } = request.body;
 
         // Validate required fields
         if (!name || !user_id) {
           return reply.code(400).send({
             error: "Missing required fields: name and user_id are required",
+          });
+        }
+
+        // Handle both new platforms format and legacy source_ids format
+        let platformsToProcess: PlatformData[] = [];
+
+        if (platforms && platforms.length > 0) {
+          // Validate platform data structure
+          for (const platform of platforms) {
+            if (!platform.source_id) {
+              return reply.code(400).send({
+                error: "Each platform must have a source_id",
+              });
+            }
+            if (typeof platform.source_id !== "string") {
+              return reply.code(400).send({
+                error: "Platform source_id must be a string",
+              });
+            }
+            if (platform.username && typeof platform.username !== "string") {
+              return reply.code(400).send({
+                error: "Platform username must be a string if provided",
+              });
+            }
+          }
+          platformsToProcess = platforms;
+        } else if (source_ids && source_ids.length > 0) {
+          // Convert legacy source_ids to platform format
+          platformsToProcess = source_ids.map((id) => ({ source_id: id }));
+        }
+
+        if (platformsToProcess.length === 0) {
+          return reply.code(400).send({
+            error: "At least one platform or source_id is required",
           });
         }
 
@@ -79,15 +120,17 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
           ]);
           const competitor = competitorResult.rows[0];
 
-          if (source_ids && source_ids.length > 0) {
-            for (const source_id of source_ids) {
+          // Insert platform associations
+          if (platformsToProcess.length > 0) {
+            for (const platform of platformsToProcess) {
               const sourceQuery = `
-              INSERT INTO public.competitor_sources (competitor_id, source_id)
-              VALUES ($1, $2)
+              INSERT INTO public.competitor_sources (competitor_id, source_id, username)
+              VALUES ($1, $2, $3)
             `;
               await client.query(sourceQuery, [
                 competitor.competitor_id,
-                source_id,
+                platform.source_id,
+                platform.username || null,
               ]);
             }
           }
@@ -95,14 +138,8 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
           // Commit transaction first to ensure competitor is saved
           await client.query("COMMIT");
 
-          // Now perform scraping and analysis based on source IDs
+          // Now perform scraping and analysis based on platform data
           try {
-            if (!source_ids || source_ids.length === 0) {
-              return reply.code(400).send({
-                error: "At least one source_id is required for scraping",
-              });
-            }
-
             let allScrapedData: any[] = [];
             const TWITTER_SOURCE_ID = "5d53c057-6e63-47c6-9301-192a3b9fa1d4";
             const LINKEDIN_SOURCE_ID = "4a267045-dbfc-432c-96a5-17a9da542248";
@@ -112,55 +149,54 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             const GOOGLE_BUSINESS_SOURCE_ID =
               "4ee3988d-70a4-4dd4-8708-5441de698a38";
 
-            // Process each source ID
-            for (const sourceId of source_ids) {
+            // Process each platform
+            for (const platform of platformsToProcess) {
               let scraperData: any[] = [];
+              const targetName = platform.username || name; // Use platform username if available, fallback to company name
 
-              switch (sourceId) {
+              switch (platform.source_id) {
                 case TWITTER_SOURCE_ID:
-                  console.log(`Starting Twitter scraping for company: ${name}`);
-                  scraperData = await scrapeTwitterPosts(name);
+                  console.log(`Starting Twitter scraping for: ${targetName}`);
+                  scraperData = await scrapeTwitterPosts(targetName);
                   break;
 
                 case LINKEDIN_SOURCE_ID:
-                  console.log(
-                    `Starting LinkedIn scraping for company: ${name}`,
-                  );
-                  scraperData = await scrapeCompanyPosts(name);
+                  console.log(`Starting LinkedIn scraping for: ${targetName}`);
+                  scraperData = await scrapeCompanyPosts(targetName);
                   break;
 
                 case WEBSITE_SOURCE_ID:
-                  console.log(`Starting website scraping for company: ${name}`);
-                  scraperData = await scrapeCompanyWebsite(name);
+                  console.log(`Starting website scraping for: ${targetName}`);
+                  scraperData = await scrapeCompanyWebsite(targetName);
                   break;
 
                 case GOOGLE_MAPS_SOURCE_ID:
                   console.log(
-                    `Starting Google Maps scraping for company: ${name}`,
+                    `Starting Google Maps scraping for: ${targetName}`,
                   );
-                  scraperData = await scrapeGoogleMapsData(name);
+                  scraperData = await scrapeGoogleMapsData(targetName);
                   break;
 
                 case GOOGLE_BUSINESS_SOURCE_ID:
                   console.log(
-                    `Starting Google Business scraping for company: ${name}`,
+                    `Starting Google Business scraping for: ${targetName}`,
                   );
-                  scraperData = await scrapeGoogleBusinessData(name);
+                  scraperData = await scrapeGoogleBusinessData(targetName);
                   break;
 
                 default:
-                  console.warn(`Unknown source ID: ${sourceId}`);
+                  console.warn(`Unknown source ID: ${platform.source_id}`);
                   continue;
               }
 
               if (scraperData && scraperData.length > 0) {
                 allScrapedData.push(...scraperData);
                 console.log(
-                  `Successfully scraped ${scraperData.length} posts from source ${sourceId} for ${name}`,
+                  `Successfully scraped ${scraperData.length} posts from source ${platform.source_id} for ${targetName}`,
                 );
               } else {
                 console.warn(
-                  `No data found for source ${sourceId} and company: ${name}`,
+                  `No data found for source ${platform.source_id} and target: ${targetName}`,
                 );
               }
             }
