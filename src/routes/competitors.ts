@@ -202,10 +202,9 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   console.log(`Starting website scraping for: ${targetName}`);
                   scraperData = await scrapeCompanyWebsite(targetName);
 
-                  const websiteAnalysisResult =
-                    await analyzeWebpageData({
-                      dataset: scraperData,
-                    });
+                  const websiteAnalysisResult = await analyzeWebpageData({
+                    dataset: scraperData,
+                  });
 
                   const validatedWebsiteResult =
                     CompetitorAnalysisResponseSchema.parse(
@@ -213,11 +212,12 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     );
 
                   // Insert the analysis data into the database
-                  const insertWebsiteResponse = await insertCompetitorAnalysisData({
-                    userId: user_id,
-                    competitorId: competitor.competitor_id,
-                    analysisData: validatedWebsiteResult,
-                  });
+                  const insertWebsiteResponse =
+                    await insertCompetitorAnalysisData({
+                      userId: user_id,
+                      competitorId: competitor.competitor_id,
+                      analysisData: validatedWebsiteResult,
+                    });
 
                   console.log(`Analysis data inserted.`, insertWebsiteResponse);
                   break;
@@ -240,24 +240,38 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   console.warn(`Unknown source ID: ${platform.source_id}`);
                   continue;
               }
-
- 
-
-            console.log(`Total scraped posts: ${allScrapedData.length}`);
+              if (scraperData && scraperData.length > 0) {
+                allScrapedData.push(...scraperData);
+                console.log(
+                  `Successfully scraped ${scraperData.length} posts from source ${platform.source_id} for ${targetName}`,
+                );
+              } else {
+                console.warn(
+                  `No data found for source ${platform.source_id} and target: ${targetName}`,
+                );
+              }
+            }
 
             return reply.code(200).send({
               success: true,
               data: competitor,
             });
-          } 
+          } catch (scrapingError) {
+            // Log scraping errors but still return success since competitor was saved
+            console.error("Error during scraping/analysis:", scrapingError);
+            return reply.code(200).send({
+              success: true,
+              data: competitor,
+              warning:
+                "Competitor added successfully, but scraping/analysis failed",
+            });
+          }
         } catch (transactionError) {
           await client.query("ROLLBACK");
           throw transactionError;
         }
       } catch (error: any) {
         console.error("Error adding competitor:", error);
-
-        // Handle unique constraint violation
         if (error.code === "23505") {
           return reply.code(409).send({
             error:
