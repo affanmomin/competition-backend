@@ -7,6 +7,7 @@ import { scrapeGoogleMapsData } from "../google-maps-scraper";
 import { scrapeGoogleBusinessData } from "../google-business-scraper";
 import {
   analyzeCompetitorData,
+  analyzeTwitterCompetitorData,
   analyzeWebpageData,
 } from "../services/gemini-service";
 import * as fs from "fs-extra";
@@ -170,6 +171,26 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                 case TWITTER_SOURCE_ID:
                   console.log(`Starting Twitter scraping for: ${targetName}`);
                   scraperData = await scrapeTwitterPosts(targetName);
+
+                  // Step 3: Analyze with Gemini
+                  const twitterAnalysisResult =
+                    await analyzeTwitterCompetitorData({
+                      dataset: scraperData,
+                    });
+
+                  const validatedResult =
+                    CompetitorAnalysisResponseSchema.parse(
+                      twitterAnalysisResult,
+                    );
+
+                  // Insert the analysis data into the database
+                  const insertResponse = await insertCompetitorAnalysisData({
+                    userId: user_id,
+                    competitorId: competitor.competitor_id,
+                    analysisData: validatedResult,
+                  });
+
+                  console.log(`Analysis data inserted.`, insertResponse);
                   break;
 
                 case LINKEDIN_SOURCE_ID:
@@ -180,6 +201,25 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                 case WEBSITE_SOURCE_ID:
                   console.log(`Starting website scraping for: ${targetName}`);
                   scraperData = await scrapeCompanyWebsite(targetName);
+
+                  const websiteAnalysisResult =
+                    await analyzeWebpageData({
+                      dataset: scraperData,
+                    });
+
+                  const validatedWebsiteResult =
+                    CompetitorAnalysisResponseSchema.parse(
+                      websiteAnalysisResult,
+                    );
+
+                  // Insert the analysis data into the database
+                  const insertWebsiteResponse = await insertCompetitorAnalysisData({
+                    userId: user_id,
+                    competitorId: competitor.competitor_id,
+                    analysisData: validatedWebsiteResult,
+                  });
+
+                  console.log(`Analysis data inserted.`, insertWebsiteResponse);
                   break;
 
                 case GOOGLE_MAPS_SOURCE_ID:
@@ -201,96 +241,15 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   continue;
               }
 
-              if (scraperData && scraperData.length > 0) {
-                allScrapedData.push(...scraperData);
-                console.log(
-                  `Successfully scraped ${scraperData.length} posts from source ${platform.source_id} for ${targetName}`,
-                );
-              } else {
-                console.warn(
-                  `No data found for source ${platform.source_id} and target: ${targetName}`,
-                );
-              }
-            }
-
-            if (allScrapedData.length === 0) {
-              return reply.code(201).send({
-                success: true,
-                data: competitor,
-                warning:
-                  "Competitor created but no data found from any source. Company may not exist on the specified platforms or scraping failed.",
-              });
-            }
+ 
 
             console.log(`Total scraped posts: ${allScrapedData.length}`);
-
-            // Step 3: Analyze with Gemini
-            const analysisResult = await analyzeCompetitorData({
-              dataset: allScrapedData,
-            });
-
-            const validatedResult =
-              CompetitorAnalysisResponseSchema.parse(analysisResult);
-
-            // Insert the analysis data into the database
-            const insertResponse = await insertCompetitorAnalysisData({
-              userId: user_id,
-              competitorId: competitor.competitor_id,
-              analysisData: validatedResult,
-            });
-
-            console.log(`Analysis data inserted.`, insertResponse);
 
             return reply.code(200).send({
               success: true,
               data: competitor,
-              analysis: {
-                posts_scraped: allScrapedData.length,
-                features_found: analysisResult.features?.length || 0,
-                complaints_found: analysisResult.complaints?.length || 0,
-                leads_found: analysisResult.leads?.length || 0,
-                alternatives_found: analysisResult.alternatives?.length || 0,
-              },
             });
-          } catch (scrapingError: any) {
-            console.error("Error during scraping/analysis:", scrapingError);
-
-            // Return success for competitor creation but with scraping error
-            if (
-              scrapingError.message?.includes("Twitter") ||
-              scrapingError.message?.includes("LinkedIn") ||
-              scrapingError.message?.includes("website") ||
-              scrapingError.message?.includes("Google Maps") ||
-              scrapingError.message?.includes("Google Business")
-            ) {
-              return reply.code(201).send({
-                success: true,
-                data: competitor,
-                error:
-                  "Competitor created successfully, but scraping failed. The company page may not exist or be accessible on the specified platforms.",
-              });
-            } else if (scrapingError.message?.includes("GEMINI_API_KEY")) {
-              return reply.code(201).send({
-                success: true,
-                data: competitor,
-                error:
-                  "Competitor created and scraped successfully, but Gemini AI analysis failed due to missing API key.",
-              });
-            } else if (scrapingError.message?.includes("Gemini")) {
-              return reply.code(201).send({
-                success: true,
-                data: competitor,
-                error:
-                  "Competitor created and scraped successfully, but Gemini AI analysis failed.",
-              });
-            } else {
-              return reply.code(201).send({
-                success: true,
-                data: competitor,
-                error: `Competitor created successfully, but analysis failed: ${scrapingError.message}`,
-              });
-            }
-          }
+          } 
         } catch (transactionError) {
           await client.query("ROLLBACK");
           throw transactionError;
