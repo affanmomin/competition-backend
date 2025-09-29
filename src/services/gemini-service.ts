@@ -875,3 +875,379 @@ Process the following LinkedIn posts and their comments:`;
     throw error;
   }
 }
+
+
+export async function analyzeGoogleMapsCompetitorData(
+  request: GeminiAnalysisRequest,
+): Promise<GeminiAnalysisResponse> {
+  if (!GEMINI_API_KEY) {
+    console.log(GEMINI_API_KEY);
+    throw new Error("GEMINI_API_KEY environment variable is required");
+  }
+
+  const defaultPrompt = `
+# You are a precision analysis engine for competitor research focused on Google Maps. Extract ONLY high-value, structured insights from Google Maps user reviews, forum posts, and their comments.
+
+IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
+
+## 🗺️ Google Maps-Specific Dataset
+
+Each item in the dataset represents a Google Maps review, forum post, or comment with the following shape (fields may be missing in some items):
+- text: string (main body)
+- dateISO: string (yyyy-mm-dd)
+- rating: number (1-5, if review)
+- likesNumeric: number (if available)
+- commentsNumeric: number (if available)
+- mediaType: 'Image' | 'Video' | 'Unknown'
+- mediaLink: string (optional)
+- comments: Array<{ author: string; text: string; time?: string; subtitle?: string }>
+
+Evidence ID policy for Google Maps (MUST follow exactly):
+- For main post/review evidence: "review:" + (dateISO or 'unknown') + ":" + first 40 chars of text
+- For comment evidence: "comment:" + (author or 'unknown') + ":" + first 40 chars of comment.text
+- Always trim whitespace and collapse newlines; do not invent or alter text
+
+## 🎯 Analysis Categories (Extract ONLY these 4)
+
+### 1. FEATURES
+Product announcements, launches, updates, new capabilities, integrations, or deprecations explicitly mentioned in main text. If a comment clearly reveals a new feature or update confirmed by Google, include it.
+
+### 2. COMPLAINTS
+User pain points, bugs, service issues, missing features, pricing concerns, or performance problems expressed in comments or reviews. Only include explicit dissatisfaction.
+
+### 3. LEADS
+Clear switching intent from comments: Users expressing frustration, dissatisfaction, evaluating alternatives, or intent to switch. Use comment author as username.
+
+### 4. ALTERNATIVES
+Specific alternative product/service names mentioned in comments (recommendations, comparisons, replacements, or evaluations).
+
+## 📋 Required JSON Output Schema
+
+{
+  "features": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "feature_type": "new|update|integration|beta|deprecated",
+      "impact_level": "minor|major|breaking",
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "complaints": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "category": "performance|ui_ux|pricing|support|features|bugs|other",
+      "severity": "low|medium|high|critical",
+      "sentiment_score": -1.0 to 1.0,
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "leads": [
+    {
+      "username": "string",  
+      "platform": "google_maps",
+      "excerpt": "string (max 200 chars)",
+      "reason": "string (max 100 chars)",
+      "lead_type": "switching|evaluating|dissatisfied|researching",
+      "urgency": "low|medium|high|immediate",
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "string (max 50 chars)",
+      "evidence_ids": ["string"],
+      "platform": "google_maps",
+      "mention_context": "recommendation|comparison|replacement|evaluation",
+      "confidence_score": 0.6-1.0
+    }
+  ]
+}
+
+## 🚨 CRITICAL ANTI-HALLUCINATION RULES
+
+ZERO FABRICATION:
+- NEVER invent post or comment content
+- NEVER combine multiple posts/comments into one insight
+- NEVER infer meaning not explicitly present
+- NEVER create usernames that don't exist in comments
+
+STRICT DATA VALIDATION:
+- Every evidence_id MUST follow the Google Maps evidence format described above and MUST be derived directly from the provided text or comment.text
+- username MUST be the exact comment.author string
+- platform MUST be "google_maps"
+- excerpt MUST be a direct quote from comment.text or text (max 200 chars)
+- canonical MUST be derived only from actual text content
+
+VERIFICATION REQUIREMENTS:
+- For features: require explicit mention of product capability, update, or launch
+- For complaints: require explicit dissatisfaction in a comment or review
+- For leads: require explicit switching intent, evaluation, or strong dissatisfaction
+- For alternatives: require explicit, specific product/service names
+
+CONFIDENCE SCORING:
+- Use 0.6-1.0 only; exclude items < 0.6
+- Set 0.0 if direct evidence cannot be located in provided text
+
+## 🔒 Google Maps-Specific Processing Rules
+
+PRIORITIZATION ORDER:
+1) Comments/reviews showing complaints or switching intent
+2) Alternatives explicitly recommended in comments/reviews
+3) Features explicitly announced in posts/reviews
+
+EFFICIENCY:
+- Skip spam, vague or promotional fluff
+- Consolidate duplicates under one canonical phrase
+
+OUTPUT CONSTRAINTS:
+- Return ONLY JSON object
+- Use concise text in all fields
+
+DATASET FIDELITY:
+- ONLY use provided text and comments[].text/author
+- NEVER rely on external knowledge
+- If unsure, exclude rather than guess
+
+## 📦 Dataset
+
+Process the following Google Maps reviews/posts and their comments:`;
+
+  const prompt = defaultPrompt;
+  const datasetMinified = JSON.stringify(request.dataset);
+  console.log("Google Maps dataset being processed:", datasetMinified);
+
+  const body = {
+    contents: [
+      {
+        parts: [{ text: prompt }, { text: datasetMinified }],
+      },
+    ],
+    generationConfig: {
+      response_mime_type: "application/json",
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  try {
+    const response = await axios.post(GEMINI_API_URL, body, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_API_KEY,
+      },
+    });
+
+    if (!response.data) {
+      const errorText = await response.data.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    if (
+      !response.data.candidates ||
+      !response.data.candidates[0] ||
+      !response.data.candidates[0].content
+    ) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    const content = response.data.candidates[0].content.parts[0].text;
+    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+
+    return parsedContent;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Failed to parse Gemini response: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export async function analyzePlayStoreCompetitorData(
+  request: GeminiAnalysisRequest,
+): Promise<GeminiAnalysisResponse> {
+  if (!GEMINI_API_KEY) {
+    console.log(GEMINI_API_KEY);
+    throw new Error("GEMINI_API_KEY environment variable is required");
+  }
+
+  const playStorePrompt = `
+# You are a precision analysis engine for competitor research focused on Google Play Store. Extract ONLY high-value, structured insights from Play Store app reviews and their comments.
+
+IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
+
+## 📱 Play Store-Specific Dataset
+
+Each item in the dataset represents a Play Store app review or comment with the following shape (fields may be missing in some items):
+- text: string (review or main body)
+- dateISO: string (yyyy-mm-dd)
+- rating: number (1-5)
+- likesNumeric: number (if available)
+- commentsNumeric: number (if available)
+- appVersion: string (if available)
+- comments: Array<{ author: string; text: string; time?: string; subtitle?: string }>
+
+Evidence ID policy for Play Store (MUST follow exactly):
+- For main review evidence: "review:" + (dateISO or 'unknown') + ":" + first 40 chars of text
+- For comment evidence: "comment:" + (author or 'unknown') + ":" + first 40 chars of comment.text
+- Always trim whitespace and collapse newlines; do not invent or alter text
+
+## 🎯 Analysis Categories (Extract ONLY these 4)
+
+### 1. FEATURES
+Product announcements, launches, updates, new capabilities, integrations, or deprecations explicitly mentioned in review text. If a comment clearly reveals a new feature or update confirmed by the company, include it.
+
+### 2. COMPLAINTS
+User pain points, bugs, service issues, missing features, pricing concerns, or performance problems expressed in reviews or comments. Only include explicit dissatisfaction.
+
+### 3. LEADS
+Clear switching intent from comments: Users expressing frustration, dissatisfaction, evaluating alternatives, or intent to switch. Use comment author as username.
+
+### 4. ALTERNATIVES
+Specific alternative app names mentioned in comments (recommendations, comparisons, replacements, or evaluations).
+
+## 📋 Required JSON Output Schema
+
+{
+  "features": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "feature_type": "new|update|integration|beta|deprecated",
+      "impact_level": "minor|major|breaking",
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "complaints": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "category": "performance|ui_ux|pricing|support|features|bugs|other",
+      "severity": "low|medium|high|critical",
+      "sentiment_score": -1.0 to 1.0,
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "leads": [
+    {
+      "username": "string",  
+      "platform": "google_playstore",
+      "excerpt": "string (max 200 chars)",
+      "reason": "string (max 100 chars)",
+      "lead_type": "switching|evaluating|dissatisfied|researching",
+      "urgency": "low|medium|high|immediate",
+      "confidence_score": 0.6-1.0
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "string (max 50 chars)",
+      "evidence_ids": ["string"],
+      "platform": "google_playstore",
+      "mention_context": "recommendation|comparison|replacement|evaluation",
+      "confidence_score": 0.6-1.0
+    }
+  ]
+}
+
+## 🚨 CRITICAL ANTI-HALLUCINATION RULES
+
+ZERO FABRICATION:
+- NEVER invent review or comment content
+- NEVER combine multiple reviews/comments into one insight
+- NEVER infer meaning not explicitly present
+- NEVER create usernames that don't exist in comments
+
+STRICT DATA VALIDATION:
+- Every evidence_id MUST follow the Play Store evidence format described above and MUST be derived directly from the provided review text or comment.text
+- username MUST be the exact comment.author string
+- platform MUST be "google_playstore"
+- excerpt MUST be a direct quote from comment.text or review text (max 200 chars)
+- canonical MUST be derived only from actual text content
+
+VERIFICATION REQUIREMENTS:
+- For features: require explicit mention of product capability, update, or launch
+- For complaints: require explicit dissatisfaction in a review or comment
+- For leads: require explicit switching intent, evaluation, or strong dissatisfaction
+- For alternatives: require explicit, specific app names
+
+CONFIDENCE SCORING:
+- Use 0.6-1.0 only; exclude items < 0.6
+- Set 0.0 if direct evidence cannot be located in provided text
+
+## 🔒 Play Store-Specific Processing Rules
+
+PRIORITIZATION ORDER:
+1) Comments/reviews showing complaints or switching intent
+2) Alternatives explicitly recommended in comments/reviews
+3) Features explicitly announced in reviews/comments
+
+EFFICIENCY:
+- Skip spam, vague or promotional fluff
+- Consolidate duplicates under one canonical phrase
+
+OUTPUT CONSTRAINTS:
+- Return ONLY JSON object
+- Use concise text in all fields
+
+DATASET FIDELITY:
+- ONLY use provided review text and comments[].text/author
+- NEVER rely on external knowledge
+- If unsure, exclude rather than guess
+
+## 📦 Dataset
+
+Process the following Play Store reviews and their comments:`;
+
+  const prompt = playStorePrompt;
+  const datasetMinified = JSON.stringify(request.dataset);
+  console.log("Play Store dataset being processed:", datasetMinified);
+
+  const body = {
+    contents: [
+      {
+        parts: [{ text: prompt }, { text: datasetMinified }],
+      },
+    ],
+    generationConfig: {
+      response_mime_type: "application/json",
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  try {
+    const response = await axios.post(GEMINI_API_URL, body, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_API_KEY,
+      },
+    });
+
+    if (!response.data) {
+      const errorText = await response.data.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    if (
+      !response.data.candidates ||
+      !response.data.candidates[0] ||
+      !response.data.candidates[0].content
+    ) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    const content = response.data.candidates[0].content.parts[0].text;
+    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+
+    return parsedContent;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Failed to parse Gemini response: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+

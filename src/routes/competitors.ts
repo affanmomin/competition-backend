@@ -10,6 +10,8 @@ import {
   analyzeTwitterCompetitorData,
   analyzeWebpageData,
   analyzeLinkedInCompetitorData,
+  analyzeGoogleMapsCompetitorData,
+  analyzePlayStoreCompetitorData,
 } from "../services/gemini-service";
 import * as fs from "fs-extra";
 import * as path from "path";
@@ -252,6 +254,9 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     `Starting Google Maps scraping for: ${targetName}`,
                   );
                   scraperData = await scrapeGoogleMapsData(targetName);
+                  await analyzeGoogleMapsCompetitorData({
+                    dataset: scraperData,
+                  });
                   break;
 
                 case GOOGLE_PLAYSTORE_SOURCE_ID:
@@ -259,6 +264,9 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     `Starting Google Business scraping for: ${targetName}`,
                   );
                   scraperData = await scrapeGoogleBusinessData(targetName);
+                  await analyzePlayStoreCompetitorData({
+                    dataset: scraperData,
+                  });
                   break;
 
                 default:
