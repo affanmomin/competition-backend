@@ -33,7 +33,7 @@ const DEBUG = true;
 
 const INCLUDE_COMMENTS = true;
 const MAX_COMMENT_PAGES = 5; // how many times to scroll to load more comments
-const MAX_COMMENTS_PER_POST = 100; // hard cap per post
+const MAX_COMMENTS_PER_POST = 50; // hard cap per post
 const TWEET_LIMIT = 5; // number of tweets to scrape
 const PARALLEL_LIMIT = 2; // number of tweet pages to scrape in parallel
 
