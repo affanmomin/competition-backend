@@ -684,3 +684,194 @@ Process the following Twitter posts and comments from competitor accounts:`;
     throw error;
   }
 }
+
+/**
+ * Analyzes LinkedIn competitor data with LinkedIn-specific optimizations
+ * @param request - The analysis request containing LinkedIn dataset
+ * @returns Promise<GeminiAnalysisResponse> - Structured analysis results optimized for LinkedIn content
+ */
+export async function analyzeLinkedInCompetitorData(
+  request: GeminiAnalysisRequest,
+): Promise<GeminiAnalysisResponse> {
+  if (!GEMINI_API_KEY) {
+    console.log(GEMINI_API_KEY);
+    throw new Error("GEMINI_API_KEY environment variable is required");
+  }
+
+  const defaultPrompt = `# You are a precision LinkedIn analysis engine for competitor research. Extract ONLY high-value, structured insights from LinkedIn company posts and their comments.
+
+IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
+
+## 💼 LinkedIn-Specific Dataset
+
+Each item in the dataset represents a LinkedIn post with the following shape (fields may be missing in some items):
+- text: string (post body)
+- dateISO: string (yyyy-mm-dd)
+- likesNumeric: number
+- commentsNumeric: number
+- sharesNumeric: number
+- mediaType: 'Image' | 'Video' | 'Unknown'
+- mediaLink: string (optional)
+- comments: Array<{ author: string; text: string; time?: string; subtitle?: string }>
+
+Evidence ID policy for LinkedIn (MUST follow exactly):
+- For post evidence: "post:" + (dateISO or 'unknown') + ":" + first 40 chars of post.text
+- For comment evidence: "comment:" + (author or 'unknown') + ":" + first 40 chars of comment.text
+- Always trim whitespace and collapse newlines; do not invent or alter text
+
+## 🎯 Analysis Categories (Extract ONLY these 4)
+
+### 1. FEATURES
+Product announcements, launches, updates, new capabilities, integrations, or deprecations explicitly mentioned in post text. If a comment clearly reveals a new feature or update confirmed by the company, include it.
+
+### 2. COMPLAINTS
+User pain points, bugs, service issues, missing features, pricing concerns, or performance problems expressed in comments. Only include explicit dissatisfaction.
+
+### 3. LEADS
+Clear switching intent from comments: Users expressing frustration, dissatisfaction, evaluating alternatives, or intent to switch. Use comment author as username.
+
+### 4. ALTERNATIVES
+Specific alternative product/service names mentioned in comments (recommendations, comparisons, replacements, or evaluations).
+
+## 📋 Required JSON Output Schema
+
+{
+  "features": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "feature_type": "new|update|integration|beta|deprecated",
+      "impact_level": "minor|major|breaking",
+      "confidence_score": 0.0-1.0
+    }
+  ],
+  "complaints": [
+    {
+      "canonical": "string (max 60 chars)",
+      "evidence_ids": ["string"],
+      "category": "performance|ui_ux|pricing|support|features|bugs|other",
+      "severity": "low|medium|high|critical",
+      "sentiment_score": -1.0 to 1.0,
+      "confidence_score": 0.0-1.0
+    }
+  ],
+  "leads": [
+    {
+      "username": "string",  
+      "platform": "linkedin",
+      "excerpt": "string (max 200 chars)",
+      "reason": "string (max 100 chars)",
+      "lead_type": "switching|evaluating|dissatisfied|researching",
+      "urgency": "low|medium|high|immediate",
+      "confidence_score": 0.0-1.0
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "string (max 50 chars)",
+      "evidence_ids": ["string"],
+      "platform": "linkedin",
+      "mention_context": "recommendation|comparison|replacement|evaluation",
+      "confidence_score": 0.0-1.0
+    }
+  ]
+}
+
+## 🚨 CRITICAL ANTI-HALLUCINATION RULES
+
+ZERO FABRICATION:
+- NEVER invent post or comment content
+- NEVER combine multiple posts/comments into one insight
+- NEVER infer meaning not explicitly present
+- NEVER create usernames that don't exist in comments
+
+STRICT DATA VALIDATION:
+- Every evidence_id MUST follow the LinkedIn evidence format described above and MUST be derived directly from the provided post.text or comment.text
+- username MUST be the exact comment.author string
+- platform MUST be "linkedin"
+- excerpt MUST be a direct quote from comment.text or post.text (max 200 chars)
+- canonical MUST be derived only from actual text content
+
+VERIFICATION REQUIREMENTS:
+- For features: require explicit mention of product capability, update, or launch
+- For complaints: require explicit dissatisfaction in a comment
+- For leads: require explicit switching intent, evaluation, or strong dissatisfaction
+- For alternatives: require explicit, specific product/service names
+
+CONFIDENCE SCORING:
+- Use 0.6-1.0 only; exclude items < 0.6
+- Set 0.0 if direct evidence cannot be located in provided text
+
+## 🔒 LinkedIn-Specific Processing Rules
+
+PRIORITIZATION ORDER:
+1) Comments showing complaints or switching intent
+2) Alternatives explicitly recommended in comments
+3) Features explicitly announced in posts
+
+EFFICIENCY:
+- Skip spam, vague or promotional fluff
+- Consolidate duplicates under one canonical phrase
+
+OUTPUT CONSTRAINTS:
+- Return ONLY JSON object
+- Use concise text in all fields
+
+DATASET FIDELITY:
+- ONLY use provided post.text and comments[].text/author
+- NEVER rely on external knowledge
+- If unsure, exclude rather than guess
+
+## 📦 Dataset
+
+Process the following LinkedIn posts and their comments:`;
+
+  const prompt = defaultPrompt;
+  const datasetMinified = JSON.stringify(request.dataset);
+  console.log("LinkedIn dataset being processed:", datasetMinified);
+
+  const body = {
+    contents: [
+      {
+        parts: [{ text: prompt }, { text: datasetMinified }],
+      },
+    ],
+    generationConfig: {
+      response_mime_type: "application/json",
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  try {
+    const response = await axios.post(GEMINI_API_URL, body, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-goog-api-key": GEMINI_API_KEY,
+      },
+    });
+
+    if (!response.data) {
+      const errorText = await response.data.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    if (
+      !response.data.candidates ||
+      !response.data.candidates[0] ||
+      !response.data.candidates[0].content
+    ) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    const content = response.data.candidates[0].content.parts[0].text;
+    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+
+    return parsedContent;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`Failed to parse Gemini response: ${error.message}`);
+    }
+    throw error;
+  }
+}

@@ -9,6 +9,7 @@ import {
   analyzeCompetitorData,
   analyzeTwitterCompetitorData,
   analyzeWebpageData,
+  analyzeLinkedInCompetitorData,
 } from "../services/gemini-service";
 import * as fs from "fs-extra";
 import * as path from "path";
@@ -196,6 +197,30 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                 case LINKEDIN_SOURCE_ID:
                   console.log(`Starting LinkedIn scraping for: ${targetName}`);
                   scraperData = await scrapeCompanyPosts(targetName);
+
+                  // Step 3: Analyze with Gemini
+                  const linkedinAnalysisResult =
+                    await analyzeLinkedInCompetitorData({
+                      dataset: scraperData,
+                    });
+
+                  const validatedLinkedinResult =
+                    CompetitorAnalysisResponseSchema.parse(
+                      linkedinAnalysisResult,
+                    );
+
+                  // Insert the analysis data into the database
+                  const insertLinkedinResponse =
+                    await insertCompetitorAnalysisData({
+                      userId: user_id,
+                      competitorId: competitor.competitor_id,
+                      analysisData: validatedLinkedinResult,
+                    });
+
+                  console.log(
+                    `Analysis data inserted.`,
+                    insertLinkedinResponse,
+                  );
                   break;
 
                 case WEBSITE_SOURCE_ID:
