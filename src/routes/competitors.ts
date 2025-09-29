@@ -146,7 +146,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
             const WEBSITE_SOURCE_ID = "da6acd0d-7b5e-4aec-8d0c-9126220a8341";
             const GOOGLE_MAPS_SOURCE_ID =
               "8e7857f1-d153-4470-bd6a-cf4ad79bb8fe";
-            const GOOGLE_BUSINESS_SOURCE_ID =
+            const GOOGLE_PLAYSTORE_SOURCE_ID =
               "4ee3988d-70a4-4dd4-8708-5441de698a38";
 
             // Process each platform
@@ -177,7 +177,7 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   scraperData = await scrapeGoogleMapsData(targetName);
                   break;
 
-                case GOOGLE_BUSINESS_SOURCE_ID:
+                case GOOGLE_PLAYSTORE_SOURCE_ID:
                   console.log(
                     `Starting Google Business scraping for: ${targetName}`,
                   );
@@ -369,18 +369,44 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params;
 
-        const query = "SELECT * FROM public.competitors WHERE id = $1";
-        const result = await client.query(query, [id]);
+        // First get the competitor details
+        const competitorQuery =
+          "SELECT * FROM public.competitors WHERE competitor_id = $1";
+        const competitorResult = await client.query(competitorQuery, [id]);
 
-        if (result.rows.length === 0) {
+        if (competitorResult.rows.length === 0) {
           return reply.code(404).send({
             error: "Competitor not found",
           });
         }
 
+        const competitor = competitorResult.rows[0];
+
+        // Then get the competitor sources with source details
+        const sourcesQuery = `
+          SELECT 
+            cs.id as competitor_source_id,
+            cs.competitor_id,
+            cs.source_id,
+            cs.username,
+            cs.created_at as source_created_at,
+            cs.updated_at as source_updated_at,
+            s.platform,
+            s.enabled,
+            s.last_scraped_at
+          FROM public.competitor_sources cs
+          LEFT JOIN public.sources s ON cs.source_id = s.id
+          WHERE cs.competitor_id = $1
+          ORDER BY cs.created_at DESC
+        `;
+        const sourcesResult = await client.query(sourcesQuery, [id]);
+
         return {
           success: true,
-          data: result.rows[0],
+          data: {
+            ...competitor,
+            sources: sourcesResult.rows,
+          },
         };
       } catch (error: any) {
         console.error("Error fetching competitor:", error);

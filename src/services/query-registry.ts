@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Type for query metadata and configuration
@@ -8,17 +8,17 @@ export interface QueryConfig {
   title: string;
   description: string;
   query: string;
-  chartType: 'line' | 'bar' | 'pie' | 'area' | 'scatter' | 'number' | 'table';
+  chartType: "line" | "bar" | "pie" | "area" | "scatter" | "number" | "table";
 }
 
 /**
  * Registry of all available queries
  */
 export const queryRegistry: Record<string, QueryConfig> = {
-  'active-competitors': {
-    key: 'active-competitors',
-    title: 'Active Competitors',
-    description: 'Number of active competitors being tracked',
+  "active-competitors": {
+    key: "active-competitors",
+    title: "Active Competitors",
+    description: "Number of active competitors being tracked",
     query: `
       SELECT COUNT(*) AS active_competitors
       FROM competitors
@@ -26,12 +26,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ($2::timestamp is null OR true)
         AND ($3::timestamp is null OR true);
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'sources-coverage': {
-    key: 'sources-coverage',
-    title: 'Sources Coverage',
-    description: 'Enabled vs disabled sources by competitor',
+  "sources-coverage": {
+    key: "sources-coverage",
+    title: "Sources Coverage",
+    description: "Enabled vs disabled sources by competitor",
     query: `
       SELECT
         c.name AS name,
@@ -56,12 +56,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY name, label;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'posts-analyzed': {
-    key: 'posts-analyzed',
-    title: 'Posts Analyzed',
-    description: 'Number of posts analyzed in the given period',
+  "posts-analyzed": {
+    key: "posts-analyzed",
+    title: "Posts Analyzed",
+    description: "Number of posts analyzed in the given period",
     query: `
       SELECT COUNT(*) AS posts_analyzed
       FROM analyzed_posts ap
@@ -70,12 +70,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ap.analyzed_at >= $2
         AND ap.analyzed_at < $3;
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'mentions-trend': {
-    key: 'mentions-trend',
-    title: 'Mentions Trend',
-    description: 'Daily trend of mentions',
+  "mentions-trend": {
+    key: "mentions-trend",
+    title: "Mentions Trend",
+    description: "Daily trend of mentions",
     query: `
       SELECT
         date_trunc('day', ap.analyzed_at)::timestamptz AS date,
@@ -89,12 +89,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
+    chartType: "line",
   },
-  'competitor-sentiment': {
-    key: 'competitor-sentiment',
-    title: 'Competitor Sentiment Distribution',
-    description: 'Sentiment distribution by competitor',
+  "competitor-sentiment": {
+    key: "competitor-sentiment",
+    title: "Competitor Sentiment Distribution",
+    description: "Sentiment distribution by competitor",
     query: `
       SELECT c.competitor_id AS competitor_id,
              c.name,
@@ -108,12 +108,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY c.name;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'share-of-voice': {
-    key: 'share-of-voice',
-    title: 'Share of Voice',
-    description: 'Mentions by competitor',
+  "share-of-voice": {
+    key: "share-of-voice",
+    title: "Share of Voice",
+    description: "Mentions by competitor",
     query: `
       WITH tot AS (
         SELECT COUNT(*) AS total_mentions
@@ -135,12 +135,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name, t.total_mentions
       ORDER BY value DESC;
     `,
-    chartType: 'pie'
+    chartType: "pie",
   },
-  'net-sentiment-score': {
-    key: 'net-sentiment-score',
-    title: 'Net Sentiment Score',
-    description: 'Net sentiment score per competitor (requires sentiment analysis)',
+  "net-sentiment-score": {
+    key: "net-sentiment-score",
+    title: "Net Sentiment Score",
+    description:
+      "Net sentiment score per competitor (requires sentiment analysis)",
     query: `
       SELECT
         c.name AS name,
@@ -154,13 +155,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name
       ORDER BY value DESC NULLS LAST;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'top-features-short': {
-  key: 'top-features-short',
-  title: 'Top 5 Features',
-  description: 'Top 5 features by competitor',
-  query: `
+  "top-features-short": {
+    key: "top-features-short",
+    title: "Top 5 Features",
+    description: "Top 5 features by competitor",
+    query: `
     SELECT
       f.canonical AS name,
       'Features' AS label,
@@ -174,13 +175,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
     ORDER BY value DESC
     LIMIT 5;
   `,
-  chartType: 'bar'
-},
-'top-features': {
-  key: 'top-features',
-  title: 'Top Features',
-  description: 'Current top features by competitor',
-  query: `
+    chartType: "bar",
+  },
+  "top-features": {
+    key: "top-features",
+    title: "Top Features",
+    description: "Current top features by competitor",
+    query: `
     SELECT
       f.canonical AS name,
       'Features' AS label,
@@ -194,13 +195,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
     ORDER BY value DESC
     LIMIT 20;
   `,
-  chartType: 'bar'
-},
-'features-trend': {
-  key: 'features-trend',
-  title: 'Features Trend',
-  description: 'Daily trend of new features discovered',
-  query: `
+    chartType: "bar",
+  },
+  "features-trend": {
+    key: "features-trend",
+    title: "Features Trend",
+    description: "Daily trend of new features discovered",
+    query: `
     SELECT
       date_trunc('day', f.created_at)::timestamptz AS date,
       COUNT(*) AS value,
@@ -213,13 +214,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
     GROUP BY 1
     ORDER BY 1;
   `,
-  chartType: 'line'
-},
-'features-by-type': {
-  key: 'features-by-type',
-  title: 'Features by Type',
-  description: 'Feature distribution by type',
-  query: `
+    chartType: "line",
+  },
+  "features-by-type": {
+    key: "features-by-type",
+    title: "Features by Type",
+    description: "Feature distribution by type",
+    query: `
     SELECT
       COALESCE(f.feature_type, 'unknown') AS name,
       'Features' AS label,
@@ -232,13 +233,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
     GROUP BY f.feature_type
     ORDER BY value DESC;
   `,
-  chartType: 'pie'
-},
-'features-by-impact': {
-  key: 'features-by-impact',
-  title: 'Features by Impact Level',
-  description: 'Feature distribution by impact level',
-  query: `
+    chartType: "pie",
+  },
+  "features-by-impact": {
+    key: "features-by-impact",
+    title: "Features by Impact Level",
+    description: "Feature distribution by impact level",
+    query: `
     SELECT
       COALESCE(f.impact_level, 'unknown') AS name,
       'Features' AS label,
@@ -257,13 +258,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
         ELSE 4
       END;
   `,
-  chartType: 'bar'
-},
-'total-features': {
-  key: 'total-features',
-  title: 'Total Features',
-  description: 'Total features discovered with period comparison',
-  query: `
+    chartType: "bar",
+  },
+  "total-features": {
+    key: "total-features",
+    title: "Total Features",
+    description: "Total features discovered with period comparison",
+    query: `
     WITH this AS (
       SELECT COUNT(*) AS v
       FROM features f
@@ -285,13 +286,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
                 ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
     FROM this, prev;
   `,
-  chartType: 'number'
-},
-'features-by-competitor': {
-  key: 'features-by-competitor',
-  title: 'Features by Competitor',
-  description: 'Feature count by competitor',
-  query: `
+    chartType: "number",
+  },
+  "features-by-competitor": {
+    key: "features-by-competitor",
+    title: "Features by Competitor",
+    description: "Feature count by competitor",
+    query: `
     SELECT
       c.name AS name,
       'Features' AS label,
@@ -304,13 +305,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
     GROUP BY c.competitor_id, c.name
     ORDER BY value DESC;
   `,
-  chartType: 'bar'
-},
-'recent-features': {
-  key: 'recent-features',
-  title: 'Recent Features',
-  description: 'Recently discovered features',
-  query: `
+    chartType: "bar",
+  },
+  "recent-features": {
+    key: "recent-features",
+    title: "Recent Features",
+    description: "Recently discovered features",
+    query: `
     SELECT
       f.canonical AS feature,
       c.name AS competitor,
@@ -327,12 +328,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
     ORDER BY f.created_at DESC
     LIMIT 50;
   `,
-  chartType: 'table'
-},
-  'top-complaints': {
-    key: 'top-complaints',
-    title: 'Top Complaints',
-    description: 'Current top complaints',
+    chartType: "table",
+  },
+  "top-complaints": {
+    key: "top-complaints",
+    title: "Top Complaints",
+    description: "Current top complaints",
     query: `
       SELECT
         comp.canonical AS name,
@@ -347,12 +348,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY value DESC
       LIMIT 20;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'complaint-trend': {
-    key: 'complaint-trend',
-    title: 'Complaint Trend',
-    description: 'Total complaints per day over time',
+  "complaint-trend": {
+    key: "complaint-trend",
+    title: "Complaint Trend",
+    description: "Total complaints per day over time",
     query: `
       SELECT
         date_trunc('day', comp.last_updated)::timestamptz AS date,
@@ -366,12 +367,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
+    chartType: "line",
   },
-  'top-alternatives': {
-    key: 'top-alternatives',
-    title: 'Top Alternatives',
-    description: 'Current top alternatives',
+  "top-alternatives": {
+    key: "top-alternatives",
+    title: "Top Alternatives",
+    description: "Current top alternatives",
     query: `
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
@@ -384,12 +385,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY mentions DESC
       LIMIT 20;
     `,
-    chartType: 'bar',
+    chartType: "bar",
   },
-  'top-alternatives-short': {
-    key: 'top-alternatives-short',
-    title: 'Top 5 Alternatives',
-    description: 'Top 5 alternatives',
+  "top-alternatives-short": {
+    key: "top-alternatives-short",
+    title: "Top 5 Alternatives",
+    description: "Top 5 alternatives",
     query: `
       SELECT a.name AS alternative,
              SUM(a.mentions_count) AS mentions
@@ -402,13 +403,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY mentions DESC
       LIMIT 5;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'top-complaints-short': {
-  key: 'top-complaints-short',
-  title: 'Top 5 Complaints',
-  description: 'Top 5 complaints',
-  query: `
+  "top-complaints-short": {
+    key: "top-complaints-short",
+    title: "Top 5 Complaints",
+    description: "Top 5 complaints",
+    query: `
     SELECT
       comp.canonical AS name,
       'Complaints' AS label,
@@ -422,12 +423,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
     ORDER BY value DESC
     LIMIT 5;
   `,
-  chartType: 'bar'
-},
-  'leads-over-time': {
-    key: 'leads-over-time',
-    title: 'Leads Over Time',
-    description: 'Daily trend of leads',
+    chartType: "bar",
+  },
+  "leads-over-time": {
+    key: "leads-over-time",
+    title: "Leads Over Time",
+    description: "Daily trend of leads",
     query: `
       SELECT
         date_trunc('day', l.created_at)::timestamptz AS date,
@@ -440,12 +441,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY 1
       ORDER BY 1;
     `,
-    chartType: 'line'
+    chartType: "line",
   },
-  'lead-status-funnel': {
-    key: 'lead-status-funnel',
-    title: 'Lead Status Funnel',
-    description: 'Current lead status distribution',
+  "lead-status-funnel": {
+    key: "lead-status-funnel",
+    title: "Lead Status Funnel",
+    description: "Current lead status distribution",
     query: `
       SELECT
         l.status AS name,
@@ -458,12 +459,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY l.status
       ORDER BY value DESC;
     `,
-    chartType: 'bar'
+    chartType: "bar",
   },
-  'lead-source-breakdown': {
-    key: 'lead-source-breakdown',
-    title: 'Lead Source Breakdown',
-    description: 'Lead distribution by platform',
+  "lead-source-breakdown": {
+    key: "lead-source-breakdown",
+    title: "Lead Source Breakdown",
+    description: "Lead distribution by platform",
     query: `
       SELECT
         l.platform AS name,
@@ -476,12 +477,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY l.platform
       ORDER BY value DESC;
     `,
-    chartType: 'pie'
+    chartType: "pie",
   },
-  'recent-switching-leads': {
-    key: 'recent-switching-leads',
-    title: 'Recent Switching Leads',
-    description: 'Recent leads with switching intent',
+  "recent-switching-leads": {
+    key: "recent-switching-leads",
+    title: "Recent Switching Leads",
+    description: "Recent leads with switching intent",
     query: `
       SELECT l.platform,
              l.username,
@@ -496,12 +497,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY l.created_at DESC
       LIMIT 50;
     `,
-    chartType: 'table'
+    chartType: "table",
   },
-  'last-scraped': {
-    key: 'last-scraped',
-    title: 'Last Scraped',
-    description: 'Last scraped time per competitor and platform',
+  "last-scraped": {
+    key: "last-scraped",
+    title: "Last Scraped",
+    description: "Last scraped time per competitor and platform",
     query: `
       SELECT c.name AS competitor,
              s.platform,
@@ -514,12 +515,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ($3::timestamp is null OR true)
       ORDER BY c.name, s.platform;
     `,
-    chartType: 'table'
+    chartType: "table",
   },
-  'total-mentions': {
-    key: 'total-mentions',
-    title: 'Total Mentions',
-    description: 'Total mentions with period comparison',
+  "total-mentions": {
+    key: "total-mentions",
+    title: "Total Mentions",
+    description: "Total mentions with period comparison",
     query: `
       WITH this AS (
         SELECT COUNT(*) AS v
@@ -542,12 +543,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'negative-sentiment-percentage': {
-    key: 'negative-sentiment-percentage',
-    title: 'Negative Sentiment Percentage',
-    description: 'Negative sentiment percentage with period comparison (requires sentiment analysis)',
+  "negative-sentiment-percentage": {
+    key: "negative-sentiment-percentage",
+    title: "Negative Sentiment Percentage",
+    description:
+      "Negative sentiment percentage with period comparison (requires sentiment analysis)",
     query: `
       WITH base AS (
         SELECT ap.*, c.user_id
@@ -572,12 +574,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
              0.00::numeric(10,2) AS previous_pct,
              0.00::numeric(10,2) AS pct_change;
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'recurring-complaints': {
-    key: 'recurring-complaints',
-    title: 'Recurring Complaints',
-    description: 'Recurring complaints with period comparison',
+  "recurring-complaints": {
+    key: "recurring-complaints",
+    title: "Recurring Complaints",
+    description: "Recurring complaints with period comparison",
     query: `
       WITH this AS (
         SELECT COUNT(*) AS v
@@ -600,12 +602,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'alternatives-mentioned': {
-    key: 'alternatives-mentioned',
-    title: 'Alternatives Mentioned',
-    description: 'Alternatives mentioned with period comparison',
+  "alternatives-mentioned": {
+    key: "alternatives-mentioned",
+    title: "Alternatives Mentioned",
+    description: "Alternatives mentioned with period comparison",
     query: `
       WITH this AS (
         SELECT COALESCE(SUM(a.mentions_count),0) AS v
@@ -628,12 +630,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
                   ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
       FROM this, prev;
     `,
-    chartType: 'number'
+    chartType: "number",
   },
-  'recent-negative-mentions': {
-    key: 'recent-negative-mentions',
-    title: 'Recent Mentions',
-    description: 'Sample of recent mentions (sentiment analysis required)',
+  "recent-negative-mentions": {
+    key: "recent-negative-mentions",
+    title: "Recent Mentions",
+    description: "Sample of recent mentions (sentiment analysis required)",
     query: `
       SELECT ap.analyzed_at::timestamp AS analyzed_at,
              c.name AS competitor,
@@ -647,12 +649,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       ORDER BY ap.analyzed_at DESC
       LIMIT 100;
     `,
-    chartType: 'table'
+    chartType: "table",
   },
-  'alternatives-by-competitor': {
-    key: 'alternatives-by-competitor',
-    title: 'Alternatives by Competitor',
-    description: 'Alternative mentions grouped by competitor',
+  "alternatives-by-competitor": {
+    key: "alternatives-by-competitor",
+    title: "Alternatives by Competitor",
+    description: "Alternative mentions grouped by competitor",
     query: `
       SELECT c.name AS competitor,
              a.name AS alternative,
@@ -665,12 +667,13 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.name, a.name
       ORDER BY c.name, mentions DESC;
     `,
-    chartType: 'table'
+    chartType: "table",
   },
-  'all-competitors': {
-    key: 'all-competitors',
-    title: 'All Competitors',
-    description: 'Complete list of all competitors for a user with all data points',
+  "all-competitors": {
+    key: "all-competitors",
+    title: "All Competitors",
+    description:
+      "Complete list of all competitors for a user with all data points",
     query: `
       SELECT
         c.competitor_id AS id,
@@ -702,12 +705,12 @@ export const queryRegistry: Record<string, QueryConfig> = {
       GROUP BY c.competitor_id, c.name, c.slug, c.created_at, c.user_id
       ORDER BY c.created_at DESC;
     `,
-    chartType: 'table'
+    chartType: "table",
   },
-  'all-leads': {
-    key: 'all-leads',
-    title: 'All Leads',
-    description: 'Complete list of all leads for a user with all data points',
+  "all-leads": {
+    key: "all-leads",
+    title: "All Leads",
+    description: "Complete list of all leads for a user with all data points",
     query: `
       SELECT
         l.id,
@@ -731,8 +734,116 @@ export const queryRegistry: Record<string, QueryConfig> = {
         AND ($3::timestamp is null OR l.created_at < $3)
       ORDER BY l.created_at DESC;
     `,
-    chartType: 'table'
-  }
+    chartType: "table",
+  },
+  // Competitor-specific queries
+  "competitor-top-complaints-short": {
+    key: "competitor-top-complaints-short",
+    title: "Top 5 Complaints for Competitor",
+    description: "Top 5 complaints for a specific competitor",
+    query: `
+      SELECT
+        comp.canonical AS name,
+        'Complaints' AS label,
+        COUNT(*) AS value
+      FROM complaints comp
+      JOIN competitors c ON c.competitor_id = comp.competitor_id
+      WHERE c.user_id = $1
+        AND c.competitor_id = $4
+        AND ($2::timestamp is null OR true)
+        AND ($3::timestamp is null OR true)
+      GROUP BY comp.canonical
+      ORDER BY value DESC
+      LIMIT 5;
+    `,
+    chartType: "bar",
+  },
+  "competitor-top-features-short": {
+    key: "competitor-top-features-short",
+    title: "Top 5 Features for Competitor",
+    description: "Top 5 features for a specific competitor",
+    query: `
+      SELECT
+        f.canonical AS name,
+        'Features' AS label,
+        COUNT(*) AS value
+      FROM features f
+      JOIN competitors c ON c.competitor_id = f.competitor_id
+      WHERE c.user_id = $1
+        AND c.competitor_id = $4
+        AND ($2::timestamp is null OR f.last_updated >= $2)
+        AND ($3::timestamp is null OR f.last_updated < $3)
+      GROUP BY f.canonical
+      ORDER BY value DESC
+      LIMIT 5;
+    `,
+    chartType: "bar",
+  },
+  "competitor-top-alternatives-short": {
+    key: "competitor-top-alternatives-short",
+    title: "Top 5 Alternatives for Competitor",
+    description: "Top 5 alternatives for a specific competitor",
+    query: `
+      SELECT 
+        a.name AS name,
+        'Alternatives' AS label,
+        SUM(a.mentions_count) AS value
+      FROM alternatives a
+      JOIN competitors c ON c.competitor_id = a.competitor_id
+      WHERE c.user_id = $1
+        AND c.competitor_id = $4
+        AND ($2::timestamp is null OR true)
+        AND ($3::timestamp is null OR true)
+      GROUP BY a.name
+      ORDER BY value DESC
+      LIMIT 5;
+    `,
+    chartType: "bar",
+  },
+  "competitor-recent-switching-leads": {
+    key: "competitor-recent-switching-leads",
+    title: "Recent Switching Leads for Competitor",
+    description: "Recent leads with switching intent for a specific competitor",
+    query: `
+      SELECT 
+        l.platform,
+        l.username,
+        l.excerpt,
+        l.reason,
+        l.created_at::date AS date,
+        l.status
+      FROM leads l
+      JOIN analyzed_posts ap ON ap.id = l.analyzed_post_id
+      JOIN competitors c ON c.competitor_id = ap.competitor_id
+      WHERE l.user_id = $1
+        AND c.competitor_id = $4
+        AND l.created_at >= $2
+        AND l.created_at < $3
+      ORDER BY l.created_at DESC
+      LIMIT 50;
+    `,
+    chartType: "table",
+  },
+  "competitor-complaint-trend": {
+    key: "competitor-complaint-trend",
+    title: "Complaint Trend for Competitor",
+    description: "Daily complaint trend for a specific competitor",
+    query: `
+      SELECT
+        date_trunc('day', comp.last_updated)::timestamptz AS date,
+        COUNT(*) AS value,
+        'Complaints' AS label
+      FROM complaints comp
+      JOIN competitors c ON c.competitor_id = comp.competitor_id
+      WHERE c.user_id = $1
+        AND c.competitor_id = $4
+        AND comp.last_updated >= $2
+        AND comp.last_updated < $3
+      GROUP BY 1
+      ORDER BY 1;
+    `,
+    chartType: "line",
+  },
 };
 
 /**
