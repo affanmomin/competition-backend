@@ -1,6 +1,5 @@
 import type { FastifyPluginCallback, RouteHandlerMethod } from "fastify";
 import searchRoutes from "./search";
-import twitterRoutes from "./twitter";
 import authRoutes from "./auth";
 import cardRoutes from "./card";
 import competitorsRoutes from "./competitors";
@@ -10,7 +9,6 @@ import geminiRoutes from "./gemini";
 const register: FastifyPluginCallback = async (server, options, done) => {
   // Register search routes
   await searchRoutes(server);
-  await twitterRoutes(server, {});
   await authRoutes(server);
   await cardRoutes(server);
   await competitorsRoutes(server);
