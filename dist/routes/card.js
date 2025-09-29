@@ -33,25 +33,25 @@ const CardRequestSchema = zod_1.z.object({
 function cardRoutes(fastify) {
     return __awaiter(this, void 0, void 0, function* () {
         // Get available card types
-        fastify.get('/cards', () => __awaiter(this, void 0, void 0, function* () {
+        fastify.get("/cards", () => __awaiter(this, void 0, void 0, function* () {
             return {
-                available_cards: (0, query_registry_1.getAllQueryKeys)()
+                available_cards: (0, query_registry_1.getAllQueryKeys)(),
             };
         }));
         // Execute card queries
-        fastify.post('/cards', {
+        fastify.post("/cards", {
             schema: {
                 body: {
-                    type: 'object',
-                    required: ['queries', 'user_id'],
+                    type: "object",
+                    required: ["queries", "user_id"],
                     properties: {
-                        queries: { type: 'array', items: { type: 'string' }, minItems: 1 },
-                        user_id: { type: 'string' },
-                        start_date: { type: 'string', format: 'date-time' },
-                        end_date: { type: 'string', format: 'date-time' }
-                    }
-                }
-            }
+                        queries: { type: "array", items: { type: "string" }, minItems: 1 },
+                        user_id: { type: "string" },
+                        start_date: { type: "string", format: "date-time" },
+                        end_date: { type: "string", format: "date-time" },
+                    },
+                },
+            },
         }, (request, reply) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const body = CardRequestSchema.parse(request.body);
@@ -62,35 +62,35 @@ function cardRoutes(fastify) {
                 const results = yield card_service_1.cardService.executeQueries(queries, validatedParams);
                 return {
                     success: true,
-                    data: results
+                    data: results,
                 };
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
                 reply.status(400).send({
                     success: false,
-                    error: errorMessage
+                    error: errorMessage,
                 });
             }
         }));
         // Get all competitors for a user
-        fastify.get('/competitors/:user_id', {
+        fastify.get("/competitors/:user_id", {
             schema: {
                 params: {
-                    type: 'object',
-                    required: ['user_id'],
+                    type: "object",
+                    required: ["user_id"],
                     properties: {
-                        user_id: { type: 'string' }
-                    }
+                        user_id: { type: "string" },
+                    },
                 },
                 querystring: {
-                    type: 'object',
+                    type: "object",
                     properties: {
-                        start_date: { type: 'string', format: 'date-time' },
-                        end_date: { type: 'string', format: 'date-time' }
-                    }
-                }
-            }
+                        start_date: { type: "string", format: "date-time" },
+                        end_date: { type: "string", format: "date-time" },
+                    },
+                },
+            },
         }, (request, reply) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const { user_id } = request.params;
@@ -98,40 +98,40 @@ function cardRoutes(fastify) {
                 const params = query_registry_1.QueryParamsSchema.parse({
                     user_id,
                     start_date,
-                    end_date
+                    end_date,
                 });
-                const results = yield card_service_1.cardService.executeQueries(['all-competitors'], params);
+                const results = yield card_service_1.cardService.executeQueries(["all-competitors"], params);
                 return {
                     success: true,
-                    data: results['all-competitors'] || []
+                    data: results["all-competitors"] || [],
                 };
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
                 reply.status(400).send({
                     success: false,
-                    error: errorMessage
+                    error: errorMessage,
                 });
             }
         }));
         // Get all leads for a user
-        fastify.get('/leads/:user_id', {
+        fastify.get("/leads/:user_id", {
             schema: {
                 params: {
-                    type: 'object',
-                    required: ['user_id'],
+                    type: "object",
+                    required: ["user_id"],
                     properties: {
-                        user_id: { type: 'string' }
-                    }
+                        user_id: { type: "string" },
+                    },
                 },
                 querystring: {
-                    type: 'object',
+                    type: "object",
                     properties: {
-                        start_date: { type: 'string', format: 'date-time' },
-                        end_date: { type: 'string', format: 'date-time' }
-                    }
-                }
-            }
+                        start_date: { type: "string", format: "date-time" },
+                        end_date: { type: "string", format: "date-time" },
+                    },
+                },
+            },
         }, (request, reply) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const { user_id } = request.params;
@@ -139,22 +139,75 @@ function cardRoutes(fastify) {
                 const params = query_registry_1.QueryParamsSchema.parse({
                     user_id,
                     start_date,
-                    end_date
+                    end_date,
                 });
-                const results = yield card_service_1.cardService.executeQueries(['all-leads'], params);
+                const results = yield card_service_1.cardService.executeQueries(["all-leads"], params);
                 return {
                     success: true,
-                    data: results['all-leads'] || []
+                    data: results["all-leads"] || [],
                 };
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
                 reply.status(400).send({
                     success: false,
-                    error: errorMessage
+                    error: errorMessage,
                 });
             }
         }));
+        // Get competitor-specific card data
+        fastify.get("/cards/competitor/:competitor_id", {
+            schema: {
+                params: {
+                    type: "object",
+                    required: ["competitor_id"],
+                    properties: {
+                        competitor_id: { type: "string" },
+                    },
+                },
+                querystring: {
+                    type: "object",
+                    properties: {
+                        user_id: { type: "string" },
+                        start_date: { type: "string", format: "date-time" },
+                        end_date: { type: "string", format: "date-time" },
+                    },
+                    required: ["user_id"],
+                },
+            },
+        }, (request, reply) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { competitor_id } = request.params;
+                const { user_id, start_date, end_date } = request.query;
+                // Validate the standard query parameters
+                const params = query_registry_1.QueryParamsSchema.parse({
+                    user_id,
+                    start_date,
+                    end_date,
+                });
+                // Define the competitor-specific queries to execute
+                const competitorQueries = [
+                    "competitor-top-complaints-short",
+                    "competitor-top-features-short",
+                    "competitor-top-alternatives-short",
+                    "competitor-recent-switching-leads",
+                    "competitor-complaint-trend",
+                ];
+                // Execute competitor-specific queries
+                const results = yield card_service_1.cardService.executeCompetitorQueries(competitorQueries, Object.assign(Object.assign({}, params), { competitor_id }));
+                return {
+                    success: true,
+                    data: results,
+                };
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                reply.status(400).send({
+                    success: false,
+                    error: errorMessage,
+                });
+            }
+        }));
+        //get competitor by id
     });
 }
-;

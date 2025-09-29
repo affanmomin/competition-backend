@@ -128,7 +128,6 @@ function geminiRoutes(fastify) {
                     const validatedData = gemini_schemas_1.CompetitorAnalysisRequestSchema.parse(request.body);
                     const analysisRequest = {
                         dataset: validatedData.dataset,
-                        prompt: validatedData.prompt
                     };
                     const result = yield (0, gemini_service_1.analyzeCompetitorData)(analysisRequest);
                     // Validate the response

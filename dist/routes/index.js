@@ -29,10 +29,10 @@ const register = (server, options, done) => __awaiter(void 0, void 0, void 0, fu
     yield (0, sources_1.default)(server);
     yield (0, gemini_1.default)(server);
     const getStatus = (request, reply) => __awaiter(void 0, void 0, void 0, function* () {
-        return reply.status(200).send('API is live');
+        return reply.status(200).send("API is live");
     });
     const successSchema = {};
-    server.get('/', {
+    server.get("/", {
         schema: {
             response: {
                 200: successSchema,

@@ -18,7 +18,7 @@ const db_1 = __importDefault(require("../db"));
 class CardError extends Error {
     constructor(message) {
         super(message);
-        this.name = 'CardError';
+        this.name = "CardError";
     }
 }
 exports.CardError = CardError;
@@ -37,18 +37,18 @@ class CardService {
                 const result = yield db_1.default.query(queryConfig.query, [
                     params.user_id,
                     params.start_date || null,
-                    params.end_date || null
+                    params.end_date || null,
                 ]);
                 return {
                     key: queryConfig.key,
                     title: queryConfig.title,
                     description: queryConfig.description,
                     chartType: queryConfig.chartType,
-                    data: result.rows
+                    data: result.rows,
                 };
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
                 console.log(error);
                 throw new CardError(`Failed to execute query ${queryKey}: ${errorMessage}`);
             }
@@ -59,8 +59,57 @@ class CardService {
      */
     executeQueries(queryKeys, params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const queries = queryKeys.map(key => this.executeQuery(key, params));
+            const queries = queryKeys.map((key) => this.executeQuery(key, params));
             return Promise.all(queries);
+        });
+    }
+    /**
+     * Execute a competitor-specific card query with extended parameters
+     */
+    executeCompetitorQuery(queryKey, params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const queryConfig = (0, query_registry_1.getQueryConfig)(queryKey);
+            if (!queryConfig) {
+                throw new CardError(`Query not found: ${queryKey}`);
+            }
+            try {
+                // Build parameters array - competitor queries expect competitor_id as 4th parameter
+                const queryParams = [
+                    params.user_id,
+                    params.start_date || null,
+                    params.end_date || null,
+                    params.competitor_id,
+                ];
+                // Execute the query using your database connection
+                const result = yield db_1.default.query(queryConfig.query, queryParams);
+                return {
+                    key: queryConfig.key,
+                    title: queryConfig.title,
+                    description: queryConfig.description,
+                    chartType: queryConfig.chartType,
+                    data: result.rows,
+                };
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                console.log(error);
+                throw new CardError(`Failed to execute competitor query ${queryKey}: ${errorMessage}`);
+            }
+        });
+    }
+    /**
+     * Execute multiple competitor-specific card queries in parallel
+     */
+    executeCompetitorQueries(queryKeys, params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const queries = queryKeys.map((key) => this.executeCompetitorQuery(key, params));
+            const results = yield Promise.all(queries);
+            // Convert array to object with query keys as keys
+            const resultMap = {};
+            results.forEach((result) => {
+                resultMap[result.key] = result;
+            });
+            return resultMap;
         });
     }
 }
