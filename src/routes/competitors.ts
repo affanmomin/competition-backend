@@ -254,9 +254,26 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     `Starting Google Maps scraping for: ${targetName}`,
                   );
                   scraperData = await scrapeGoogleMapsData(targetName);
-                  await analyzeGoogleMapsCompetitorData({
-                    dataset: scraperData,
-                  });
+                  const googleMapsAnalysisResult =
+                    await analyzeGoogleMapsCompetitorData({
+                      dataset: scraperData,
+                    });
+
+                  const validatedMapsResult =
+                    CompetitorAnalysisResponseSchema.parse(
+                      googleMapsAnalysisResult,
+                    );
+
+                  // Insert the analysis data into the database
+                  const insertMapsResponse = await insertCompetitorAnalysisData(
+                    {
+                      userId: user_id,
+                      competitorId: competitor.competitor_id,
+                      analysisData: validatedMapsResult,
+                    },
+                  );
+
+                  console.log(`Analysis data inserted.`, insertMapsResponse);
                   break;
 
                 case GOOGLE_PLAYSTORE_SOURCE_ID:
@@ -264,27 +281,35 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     `Starting Google Business scraping for: ${targetName}`,
                   );
                   scraperData = await scrapeGoogleBusinessData(targetName);
-                  await analyzePlayStoreCompetitorData({
-                    dataset: scraperData,
-                  });
+                  const googlePlaystoreAnalysisResult =
+                    await analyzePlayStoreCompetitorData({
+                      dataset: scraperData,
+                    });
+
+                  const validatedPlaystoreResult =
+                    CompetitorAnalysisResponseSchema.parse(
+                      googlePlaystoreAnalysisResult,
+                    );
+
+                  // Insert the analysis data into the database
+                  const insertPlaystoreResponse =
+                    await insertCompetitorAnalysisData({
+                      userId: user_id,
+                      competitorId: competitor.competitor_id,
+                      analysisData: validatedPlaystoreResult,
+                    });
+
+                  console.log(
+                    `Analysis data inserted.`,
+                    insertPlaystoreResponse,
+                  );
                   break;
 
                 default:
                   console.warn(`Unknown source ID: ${platform.source_id}`);
                   continue;
               }
-              if (scraperData && scraperData.length > 0) {
-                allScrapedData.push(...scraperData);
-                console.log(
-                  `Successfully scraped ${scraperData.length} posts from source ${platform.source_id} for ${targetName}`,
-                );
-              } else {
-                console.warn(
-                  `No data found for source ${platform.source_id} and target: ${targetName}`,
-                );
-              }
             }
-
             return reply.code(200).send({
               success: true,
               data: competitor,
