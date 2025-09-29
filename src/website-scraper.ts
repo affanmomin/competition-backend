@@ -315,6 +315,7 @@ export async function scrapeCompanyWebsite(
     // Try to construct likely website URLs
     const companySlug = companyName.toLowerCase().replace(/\s+/g, "");
     const possibleUrls = [
+      `https://www.${companySlug}.ai`,
       `https://www.${companySlug}.com`,
       `https://${companySlug}.com`,
       `https://www.${companySlug}.io`,

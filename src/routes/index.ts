@@ -1,11 +1,11 @@
-import type { FastifyPluginCallback, RouteHandlerMethod } from 'fastify';
-import searchRoutes from './search';
-import twitterRoutes from './twitter';
-import authRoutes from './auth';
-import cardRoutes from './card';
-import competitorsRoutes from './competitors';
-import sourcesRoutes from './sources';
-import geminiRoutes from './gemini';
+import type { FastifyPluginCallback, RouteHandlerMethod } from "fastify";
+import searchRoutes from "./search";
+import twitterRoutes from "./twitter";
+import authRoutes from "./auth";
+import cardRoutes from "./card";
+import competitorsRoutes from "./competitors";
+import sourcesRoutes from "./sources";
+import geminiRoutes from "./gemini";
 
 const register: FastifyPluginCallback = async (server, options, done) => {
   // Register search routes
@@ -17,12 +17,12 @@ const register: FastifyPluginCallback = async (server, options, done) => {
   await sourcesRoutes(server);
   await geminiRoutes(server);
   const getStatus: RouteHandlerMethod = async (request, reply) => {
-    return reply.status(200).send('API is live');
+    return reply.status(200).send("API is live");
   };
 
   const successSchema = {};
 
-  server.get('/', {
+  server.get("/", {
     schema: {
       response: {
         200: successSchema,
