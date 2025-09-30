@@ -664,4 +664,3 @@ async function run() {
     throw error;
   }
 }
-run();
