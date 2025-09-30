@@ -156,7 +156,6 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
 
           // Now perform scraping and analysis based on platform data
           try {
-            let allScrapedData: any[] = [];
             const TWITTER_SOURCE_ID = "5d53c057-6e63-47c6-9301-192a3b9fa1d4";
             const LINKEDIN_SOURCE_ID = "4a267045-dbfc-432c-96a5-17a9da542248";
             const WEBSITE_SOURCE_ID = "da6acd0d-7b5e-4aec-8d0c-9126220a8341";
