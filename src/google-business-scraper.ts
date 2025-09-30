@@ -22,7 +22,14 @@ function pause(min = 1000, max = 2000) {
 export async function scrapeGoogleBusinessPosts(
   businessName: string,
 ): Promise<any[]> {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: false,
+    proxy: {
+      server: "http://gw.dataimpulse.com:823",
+      username: "2cef711aaa1a060b00b2",
+      password: "71e56626760e1077",
+    },
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -304,3 +311,7 @@ export async function scrapeGoogleBusinessData(
     throw error;
   }
 }
+
+scrapeGoogleBusinessData("OpenAI").then((data) => {
+  console.log("Scraped Data:", data);
+});

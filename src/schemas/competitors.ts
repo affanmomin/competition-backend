@@ -4,6 +4,7 @@ import { z } from "zod";
 export const PlatformDataSchema = z.object({
   source_id: z.string().min(1, "source_id is required"),
   username: z.string().optional(),
+  url: z.string().url().optional(),
 });
 
 // Competitor creation schema

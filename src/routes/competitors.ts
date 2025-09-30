@@ -5,6 +5,7 @@ import { scrapeTwitterPosts } from "../twitter-scraper";
 import { scrapeCompanyWebsite } from "../website-scraper";
 import { scrapeGoogleMapsData } from "../google-maps-scraper";
 import { scrapeGoogleBusinessData } from "../google-business-scraper";
+import { scrapeGooglePlayStoreReviews } from "../google-play-store-scraper";
 import {
   analyzeCompetitorData,
   analyzeTwitterCompetitorData,
@@ -21,6 +22,7 @@ import { insertCompetitorAnalysisData } from "../services/competitor-analysis-se
 interface PlatformData {
   source_id: string;
   username?: string; // Platform-specific username or identifier
+  url?: string; // Optional URL for platforms that require direct link (e.g., Play Store)
 }
 
 interface CompetitorBody {
@@ -277,9 +279,23 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
 
                 case GOOGLE_PLAYSTORE_SOURCE_ID:
                   console.log(
-                    `Starting Google Business scraping for: ${targetName}`,
+                    `Starting Google Play Store scraping for: ${targetName}`,
                   );
-                  scraperData = await scrapeGoogleBusinessData(targetName);
+                  {
+                    const url =
+                      platform.url ||
+                      (targetName.startsWith("http") ? targetName : undefined);
+                    if (!url) {
+                      console.warn(
+                        "Play Store requires a full app URL (e.g., https://play.google.com/store/apps/details?id=...) passed as platform.url",
+                      );
+                      scraperData = [];
+                    } else {
+                      scraperData = await scrapeGooglePlayStoreReviews(url, {
+                        headless: true,
+                      });
+                    }
+                  }
                   const googlePlaystoreAnalysisResult =
                     await analyzePlayStoreCompetitorData({
                       dataset: scraperData,
@@ -720,9 +736,12 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
 
                 case GOOGLE_PLAYSTORE_SOURCE_ID:
                   console.log(
-                    `Starting Google Business scraping for: ${targetName}`,
+                    `Starting Google Play Store scraping for: ${targetName}`,
                   );
-                  scraperData = await scrapeGoogleBusinessData(targetName);
+
+                  scraperData = await scrapeGooglePlayStoreReviews(targetName, {
+                    headless: true,
+                  });
                   break;
 
                 default:

@@ -5,6 +5,7 @@ import { scrapeTwitterPosts } from "../twitter-scraper";
 import { scrapeCompanyWebsite } from "../website-scraper";
 import { scrapeGoogleMapsData } from "../google-maps-scraper";
 import { scrapeGoogleBusinessData } from "../google-business-scraper";
+import { scrapeGooglePlayStoreReviews } from "../google-play-store-scraper";
 import { analyzeCompetitorData } from "./gemini-service";
 import { insertCompetitorAnalysisData } from "./competitor-analysis-service";
 import { CompetitorAnalysisResponseSchema } from "../schemas/gemini-schemas";
@@ -167,7 +168,16 @@ async function scrapeFromPlatform(
     case PLATFORM_SOURCE_IDS.GOOGLE_MAPS:
       return await scrapeGoogleMapsData(targetName);
     case PLATFORM_SOURCE_IDS.GOOGLE_PLAYSTORE:
-      return await scrapeGoogleBusinessData(targetName);
+      // For Play Store, expect a full URL passed as targetName when available
+      if (targetName.startsWith("http")) {
+        return await scrapeGooglePlayStoreReviews(targetName, {
+          headless: true,
+        });
+      }
+      console.warn(
+        "Play Store scraping expects platform.url to be provided; skipping.",
+      );
+      return [];
     default:
       console.warn(`Unknown source ID: ${sourceId}`);
       return [];

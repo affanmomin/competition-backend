@@ -2,25 +2,32 @@
 /**
  * google-play-store-scraper.ts
  *
- * Targets the Google Play app id `app.linear`, opens the
- * "See more information on Ratings and reviews" modal,
- * scrapes reviews (or the full reviews page), and saves JSON + CSV.
+ * Opens a Google Play product page URL, opens the
+ * "See more information on Ratings and reviews" modal (or full reviews page),
+ * and scrapes reviews into a structured dataset.
+ *
+ * This module now exports a reusable function:
+ *   scrapeGooglePlayStoreReviews(playStoreUrl: string, options?)
+ * that returns an array of review objects. No files are written by default.
  */
 
 import { chromium, Page, Locator } from "playwright";
 import * as fs from "fs";
 import * as path from "path";
 
-const APP_PKG = "app.linear";
-const BASE_URL = `https://play.google.com/store/apps/details?id=${APP_PKG}&hl=en&gl=US`;
-
-const OUTPUT_DIR = path.resolve(process.cwd(), "out");
-const MAX_REVIEWS = 500;
-const SCROLL_BATCHES = 60;
-const SCROLL_STEP = 650;
-const READMORE_CLICK_LIMIT = 250;
-const HEADLESS = false;
-const DEBUG_SLOWMO = 0;
+// Tunables (can be overridden via options)
+const DEFAULTS = {
+  maxReviews: 500,
+  scrollBatches: 60,
+  scrollStep: 650,
+  readMoreClickLimit: 250,
+  headless: process.env.PLAYWRIGHT_HEADLESS
+    ? process.env.PLAYWRIGHT_HEADLESS === "true"
+    : true,
+  slowMo: process.env.PLAYWRIGHT_SLOWMO
+    ? Number(process.env.PLAYWRIGHT_SLOWMO)
+    : 0,
+};
 
 const BUTTON_ARIA = "See more information on Ratings and reviews";
 
@@ -49,7 +56,7 @@ function saveCSV(filename: string, rows: Record<string, any>[]) {
 // ---------- core: open modal by aria-label globally with progressive scroll ----------
 async function openRatingsInfoModal(page: Page): Promise<"modal" | "page"> {
   // Load & give the SPA time to hydrate
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  // page.goto will have been called by the caller
   await page
     .waitForLoadState("networkidle", { timeout: 15000 })
     .catch(() => {});
@@ -114,12 +121,45 @@ async function openRatingsInfoModal(page: Page): Promise<"modal" | "page"> {
 }
 
 // ---------- scraping ----------
-async function run() {
-  if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+export interface PlayStoreReview {
+  review_id: string | null;
+  author: string | null;
+  rating: number | null;
+  date: string | null;
+  text: string;
+  helpful_count: number;
+  developer_response_date: string | null;
+  developer_response_text: string | null;
+}
+
+export interface PlayStoreScrapeOptions {
+  maxReviews?: number;
+  scrollBatches?: number;
+  scrollStep?: number;
+  readMoreClickLimit?: number;
+  headless?: boolean;
+  slowMo?: number;
+  proxy?: {
+    server: string;
+    username?: string;
+    password?: string;
+  };
+  saveToDisk?: boolean; // for debugging local runs
+}
+
+export async function scrapeGooglePlayStoreReviews(
+  playStoreUrl: string,
+  options: PlayStoreScrapeOptions = {},
+): Promise<PlayStoreReview[]> {
+  const cfg = { ...DEFAULTS, ...options };
+
+  // Optional disk save
+  const OUTPUT_DIR = path.resolve(process.cwd(), "out");
 
   const browser = await chromium.launch({
-    headless: HEADLESS,
-    slowMo: DEBUG_SLOWMO,
+    headless: cfg.headless,
+    slowMo: cfg.slowMo,
+    proxy: cfg.proxy || undefined,
   });
   const context = await browser.newContext({
     viewport: { width: 1366, height: 900 },
@@ -131,8 +171,8 @@ async function run() {
   const page = await context.newPage();
 
   try {
-    console.log("Visiting:", BASE_URL);
-    await page.goto(BASE_URL, {
+    console.log("Visiting:", playStoreUrl);
+    await page.goto(playStoreUrl, {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
@@ -195,9 +235,9 @@ async function run() {
     }
 
     const seen = new Set<string>();
-    const reviews: any[] = [];
+    const reviews: PlayStoreReview[] = [];
 
-    for (let batch = 0; batch < SCROLL_BATCHES; batch++) {
+    for (let batch = 0; batch < cfg.scrollBatches; batch++) {
       await expandReadMores();
 
       const extracted = await root.evaluate((rootEl: HTMLElement) => {
@@ -278,10 +318,10 @@ async function run() {
           reviews.push(r);
         }
       }
-      if (reviews.length >= MAX_REVIEWS) break;
+      if (reviews.length >= cfg.maxReviews) break;
 
       // ✅ Use elementHandle.evaluate with a SINGLE argument (step)
-      const step = rand(SCROLL_STEP - 120, SCROLL_STEP + 220);
+      const step = rand(cfg.scrollStep - 120, cfg.scrollStep + 220);
       await scrollEl.evaluate((el, s) => {
         const node = el as HTMLElement;
         if (node && typeof (node as any).scrollBy === "function") {
@@ -294,19 +334,40 @@ async function run() {
       await waitMed(page);
     }
 
-    // Save
-    const jsonPath = path.join(OUTPUT_DIR, `${APP_PKG}.reviews.json`);
-    const csvPath = path.join(OUTPUT_DIR, `${APP_PKG}.reviews.csv`);
-    fs.writeFileSync(jsonPath, JSON.stringify(reviews, null, 2), "utf-8");
-    saveCSV(csvPath, reviews);
+    if (cfg.saveToDisk) {
+      if (!fs.existsSync(OUTPUT_DIR))
+        fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      // Try to infer app id from URL for filenames
+      const idMatch = /[?&]id=([^&]+)/.exec(playStoreUrl);
+      const appId = idMatch ? decodeURIComponent(idMatch[1]) : "playstore";
+      const jsonPath = path.join(OUTPUT_DIR, `${appId}.reviews.json`);
+      const csvPath = path.join(OUTPUT_DIR, `${appId}.reviews.csv`);
+      fs.writeFileSync(jsonPath, JSON.stringify(reviews, null, 2), "utf-8");
+      saveCSV(csvPath, reviews as any[]);
+      console.log(`✅ Scraped ${reviews.length} reviews`);
+      console.log(`→ JSON: ${jsonPath}`);
+      console.log(`→ CSV : ${csvPath}`);
+    }
 
-    console.log(`✅ Scraped ${reviews.length} reviews`);
-    console.log(`→ JSON: ${jsonPath}`);
-    console.log(`→ CSV : ${csvPath}`);
+    return reviews;
   } finally {
     await context.close();
     await browser.close();
   }
 }
-
-run();
+// Optional: CLI runner for local testing
+if (require.main === module) {
+  const urlArg = process.argv[2];
+  if (!urlArg) {
+    console.error(
+      "Usage: ts-node src/google-play-store-scraper.ts <PLAY_STORE_APP_URL>",
+    );
+    process.exit(1);
+  }
+  scrapeGooglePlayStoreReviews(urlArg, { saveToDisk: true, headless: false })
+    .then(() => process.exit(0))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}
