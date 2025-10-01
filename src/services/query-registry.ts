@@ -182,18 +182,19 @@ export const queryRegistry: Record<string, QueryConfig> = {
     title: "Top Features",
     description: "Current top features by competitor",
     query: `
-    SELECT
-      f.canonical AS name,
-      'Features' AS label,
-      COUNT(*) AS value
-    FROM features f
-    JOIN competitors c ON c.competitor_id = f.competitor_id
-    WHERE c.user_id = $1
-      AND ($2::timestamp is null OR f.last_updated >= $2)
-      AND ($3::timestamp is null OR f.last_updated < $3)
-    GROUP BY f.canonical
-    ORDER BY value DESC
-    LIMIT 20;
+   SELECT
+  f.canonical AS feature_name,
+  c.name AS competitor_name,
+  'Features' AS label,
+  COUNT(*) AS value
+FROM features f
+JOIN competitors c ON c.competitor_id = f.competitor_id
+WHERE c.user_id = $1
+  AND ($2::timestamp IS NULL OR f.last_updated >= $2)
+  AND ($3::timestamp IS NULL OR f.last_updated < $3)
+GROUP BY f.canonical, c.name
+ORDER BY value DESC
+LIMIT 20;
   `,
     chartType: "bar",
   },
