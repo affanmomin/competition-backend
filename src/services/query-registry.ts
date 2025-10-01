@@ -185,6 +185,9 @@ export const queryRegistry: Record<string, QueryConfig> = {
    SELECT
   f.canonical AS feature_name,
   c.name AS competitor_name,
+  f.feature_type,
+  f.impact_level,
+  f.platform,
   'Features' AS label,
   COUNT(*) AS value
 FROM features f
@@ -192,7 +195,7 @@ JOIN competitors c ON c.competitor_id = f.competitor_id
 WHERE c.user_id = $1
   AND ($2::timestamp IS NULL OR f.last_updated >= $2)
   AND ($3::timestamp IS NULL OR f.last_updated < $3)
-GROUP BY f.canonical, c.name
+GROUP BY f.canonical, c.name, f.feature_type, f.impact_level, f.platform
 ORDER BY value DESC
 LIMIT 20;
   `,
@@ -724,7 +727,7 @@ LIMIT 20;
         c.slug AS competitor_slug
       FROM leads l
       LEFT JOIN analyzed_posts ap ON ap.id = l.analyzed_post_id
-      LEFT JOIN competitors c ON c.competitor_id = ap.competitor_id AND c.user_id = l.user_id
+      LEFT JOIN competitors c ON c.competitor_id = COALESCE(l.competitor_id, ap.competitor_id)
       WHERE l.user_id = $1
         AND ($2::timestamp is null OR l.created_at >= $2)
         AND ($3::timestamp is null OR l.created_at < $3)
