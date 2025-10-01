@@ -82,20 +82,29 @@ function extractFirstJsonObject(text: string): string | null {
   if (start === -1) return null;
   let depth = 0;
   let inString = false;
-  let prev = "";
+  let escaped = false;
+
   for (let i = start; i < text.length; i++) {
     const ch = text[i];
+
     if (inString) {
-      if (ch === '"' && prev !== "\\") inString = false;
+      if (escaped) {
+        escaped = false; // Reset escape flag
+      } else if (ch === "\\") {
+        escaped = true; // Next character is escaped
+      } else if (ch === '"') {
+        inString = false; // End of string
+      }
     } else {
-      if (ch === '"') inString = true;
-      else if (ch === "{") depth++;
-      else if (ch === "}") {
+      if (ch === '"') {
+        inString = true;
+      } else if (ch === "{") {
+        depth++;
+      } else if (ch === "}") {
         depth--;
         if (depth === 0) return text.slice(start, i + 1);
       }
     }
-    prev = ch;
   }
   return null;
 }
@@ -119,34 +128,77 @@ function sanitizeJsonText(s: string): string {
 }
 
 function parseGeminiJson<T = unknown>(raw: string, label = "gemini"): T {
-  const attempts: string[] = [];
-  const push = (x?: string | null) => {
-    if (x && x.trim()) attempts.push(x.trim());
-  };
-  push(raw);
-  push(stripCodeFences(raw));
-  push(extractFirstJsonObject(raw));
-
-  for (const att of attempts) {
-    const cleaned = sanitizeJsonText(att);
-    try {
-      return JSON.parse(cleaned) as T;
-    } catch {}
+  // Strategy 1: Try parsing the raw response directly
+  try {
+    return JSON.parse(raw.trim()) as T;
+  } catch (e) {
+    console.log(
+      `Direct parse failed for ${label}:`,
+      e instanceof Error ? e.message : String(e),
+    );
   }
 
-  const extracted = extractFirstJsonObject(stripCodeFences(raw));
+  // Strategy 2: Remove code fences if present
+  const stripped = stripCodeFences(raw);
+  if (stripped !== raw) {
+    try {
+      return JSON.parse(stripped.trim()) as T;
+    } catch (e) {
+      console.log(
+        `Code fence stripped parse failed for ${label}:`,
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+
+  // Strategy 3: Extract first JSON object
+  const extracted = extractFirstJsonObject(raw);
   if (extracted) {
     try {
-      return JSON.parse(sanitizeJsonText(extracted)) as T;
-    } catch {}
+      return JSON.parse(extracted) as T;
+    } catch (e) {
+      console.log(
+        `Extracted JSON parse failed for ${label}:`,
+        e instanceof Error ? e.message : String(e),
+      );
+    }
   }
 
+  // Strategy 4: Try sanitizing the text (fix quote issues)
+  const sanitized = sanitizeJsonText(raw.trim());
+  try {
+    return JSON.parse(sanitized) as T;
+  } catch (e) {
+    console.log(
+      `Sanitized parse failed for ${label}:`,
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+
+  // Strategy 5: Combine extraction and sanitization
+  if (extracted) {
+    try {
+      const sanitizedExtracted = sanitizeJsonText(extracted);
+      return JSON.parse(sanitizedExtracted) as T;
+    } catch (e) {
+      console.log(
+        `Sanitized extracted parse failed for ${label}:`,
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+
+  // If all strategies fail, dump the raw content and throw error
   const preview = raw.slice(0, 400).replace(/\s+/g, " ");
   const filePath = dumpGeminiRaw(label, raw);
-  console.warn(
+  console.log(
     `Gemini JSON parse failed (${label}). Preview: ${preview}...` +
       (filePath ? `\nRaw saved to: ${filePath}` : ""),
   );
+  console.warn("Raw content length:", raw.length);
+  console.warn("First 200 chars:", JSON.stringify(raw.slice(0, 200)));
+  console.warn("Last 200 chars:", JSON.stringify(raw.slice(-200)));
+
   throw new SyntaxError(`Failed to parse Gemini JSON for ${label}.`);
 }
 
@@ -987,7 +1039,7 @@ export async function analyzeGoogleMapsCompetitorData(
   }
 
   const defaultPrompt = `
-# You are a precision analysis engine for competitor research focused on Google Maps. Extract ONLY high-value, structured insights from Google Maps user reviews, forum posts, and their comments.
+# You are a precision analysis engine for competitor research focused on Google Maps. Extract structured insights from Google Maps user reviews, forum posts, and their comments.
 
 IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
 
@@ -1011,13 +1063,13 @@ Evidence ID policy for Google Maps (MUST follow exactly):
 ## 🎯 Analysis Categories (Extract ONLY these 4)
 
 ### 1. FEATURES
-Product announcements, launches, updates, new capabilities, integrations, or deprecations explicitly mentioned in main text. If a comment clearly reveals a new feature or update confirmed by Google, include it.
+Capture both **explicit product/service capabilities** (announcements, updates, integrations, etc.) AND **explicit praises** (staff helpfulness, service quality, product quality, store ambiance, unique experiences).  
 
 ### 2. COMPLAINTS
-User pain points, bugs, service issues, missing features, pricing concerns, or performance problems expressed in comments or reviews. Only include explicit dissatisfaction.
+User pain points, bugs, service issues, missing features, pricing concerns, or performance problems, explicit dissatisfaction expressed in comments or reviews
 
 ### 3. LEADS
-Clear switching intent from comments: Users expressing frustration, dissatisfaction, evaluating alternatives, or intent to switch. Use comment author as username.
+switching intent from comments: Users expressing frustration, dissatisfaction, evaluating alternatives, dissatisfaction strong enough to suggest churn or intent to switch. Use comment author as username. Also include the ones complaining about User pain points, bugs, service issues, missing features, pricing concerns, or performance problems, explicit dissatisfaction expressed in comments or reviews
 
 ### 4. ALTERNATIVES
 Specific alternative product/service names mentioned in comments (recommendations, comparisons, replacements, or evaluations).
@@ -1154,10 +1206,29 @@ Process the following Google Maps reviews/posts and their comments:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
+
+    // Debug logging
+    console.log("Raw content from Gemini API:");
+    console.log("Type:", typeof content);
+    console.log("Length:", content?.length || 0);
+    console.log(
+      "First 200 chars:",
+      JSON.stringify(content?.slice(0, 200) || ""),
+    );
+    console.log("Last 200 chars:", JSON.stringify(content?.slice(-200) || ""));
+
+    if (!content || typeof content !== "string") {
+      throw new Error(
+        `Invalid content type from Gemini API: ${typeof content}`,
+      );
+    }
+
     const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
       content,
       "google-maps",
     );
+
+    console.log("Parsed content:", parsedContent);
 
     return parsedContent;
   } catch (error) {
