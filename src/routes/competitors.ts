@@ -158,13 +158,13 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
 
           // Now perform scraping and analysis based on platform data
           try {
-            const TWITTER_SOURCE_ID = "5d53c057-6e63-47c6-9301-192a3b9fa1d4";
-            const LINKEDIN_SOURCE_ID = "4a267045-dbfc-432c-96a5-17a9da542248";
-            const WEBSITE_SOURCE_ID = "da6acd0d-7b5e-4aec-8d0c-9126220a8341";
+            const TWITTER_SOURCE_ID = "14cd087d-b4c2-4356-ae81-6cbec3c8acbf";
+            const LINKEDIN_SOURCE_ID = "ddb82018-1361-428d-bcde-b0e4517ed28d";
+            const WEBSITE_SOURCE_ID = "348977d6-18c5-4ba8-bbf6-3774d7ed6a30";
             const GOOGLE_MAPS_SOURCE_ID =
-              "8e7857f1-d153-4470-bd6a-cf4ad79bb8fe";
+              "06ccac39-70bc-43ae-bfca-37590669e9e0";
             const GOOGLE_PLAYSTORE_SOURCE_ID =
-              "4ee3988d-70a4-4dd4-8708-5441de698a38";
+              "feebc6ba-ea7f-4414-a111-fa15962eb03e";
 
             // Process each platform
             for (const platform of platformsToProcess) {
@@ -292,7 +292,8 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                       scraperData = [];
                     } else {
                       scraperData = await scrapeGooglePlayStoreReviews(url, {
-                        headless: true,
+                        headless: false,
+                        maxReviews: 50,
                       });
                     }
                   }
@@ -698,13 +699,13 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
           // Now perform scraping and analysis for new platforms
           try {
             let allNewScrapedData: any[] = [];
-            const TWITTER_SOURCE_ID = "5d53c057-6e63-47c6-9301-192a3b9fa1d4";
-            const LINKEDIN_SOURCE_ID = "4a267045-dbfc-432c-96a5-17a9da542248";
-            const WEBSITE_SOURCE_ID = "da6acd0d-7b5e-4aec-8d0c-9126220a8341";
+            const TWITTER_SOURCE_ID = "14cd087d-b4c2-4356-ae81-6cbec3c8acbf";
+            const LINKEDIN_SOURCE_ID = "ddb82018-1361-428d-bcde-b0e4517ed28d";
+            const WEBSITE_SOURCE_ID = "348977d6-18c5-4ba8-bbf6-3774d7ed6a30";
             const GOOGLE_MAPS_SOURCE_ID =
-              "8e7857f1-d153-4470-bd6a-cf4ad79bb8fe";
+              "06ccac39-70bc-43ae-bfca-37590669e9e0";
             const GOOGLE_PLAYSTORE_SOURCE_ID =
-              "4ee3988d-70a4-4dd4-8708-5441de698a38";
+              "feebc6ba-ea7f-4414-a111-fa15962eb03e";
 
             // Process each new platform
             for (const platform of newPlatforms) {
@@ -740,7 +741,8 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   );
 
                   scraperData = await scrapeGooglePlayStoreReviews(targetName, {
-                    headless: true,
+                    headless: false,
+                    maxReviews: 5,
                   });
                   break;
 

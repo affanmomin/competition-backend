@@ -17,10 +17,10 @@ import * as path from "path";
 
 // Tunables (can be overridden via options)
 const DEFAULTS = {
-  maxReviews: 500,
+  maxReviews: 50,
   scrollBatches: 60,
   scrollStep: 650,
-  readMoreClickLimit: 250,
+  readMoreClickLimit: 150,
   headless: process.env.PLAYWRIGHT_HEADLESS
     ? process.env.PLAYWRIGHT_HEADLESS === "true"
     : true,
@@ -157,9 +157,12 @@ export async function scrapeGooglePlayStoreReviews(
   const OUTPUT_DIR = path.resolve(process.cwd(), "out");
 
   const browser = await chromium.launch({
-    headless: cfg.headless,
-    slowMo: cfg.slowMo,
-    proxy: cfg.proxy || undefined,
+    headless: false,
+    proxy: {
+      server: "http://gw.dataimpulse.com:823",
+      username: "2cef711aaa1a060b00b2",
+      password: "71e56626760e1077",
+    },
   });
   const context = await browser.newContext({
     viewport: { width: 1366, height: 900 },
@@ -218,7 +221,7 @@ export async function scrapeGooglePlayStoreReviews(
     const scrollEl = scrollableHandle.asElement();
     if (!scrollEl) throw new Error("Scrollable handle is not an element");
 
-    async function expandReadMores(limit = READMORE_CLICK_LIMIT) {
+    async function expandReadMores(limit = cfg.readMoreClickLimit) {
       let clicks = 0;
       const buttons = root.locator(
         'button:has-text("Full Review"), button:has-text("Read more"), div[role="button"]:has-text("Read more")',

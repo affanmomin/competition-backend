@@ -171,7 +171,8 @@ async function scrapeFromPlatform(
       // For Play Store, expect a full URL passed as targetName when available
       if (targetName.startsWith("http")) {
         return await scrapeGooglePlayStoreReviews(targetName, {
-          headless: true,
+          headless: false,
+          maxReviews: 50,
         });
       }
       console.warn(

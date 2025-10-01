@@ -64,6 +64,17 @@ export const CompetitorAnalysisRequestSchema = z.object({
 });
 
 /**
+ * Schema for simple dataset-only analysis requests
+ * Useful for testing analysis prompts with scraped JSON without requiring IDs
+ */
+export const SimpleDatasetAnalysisRequestSchema = z.object({
+  dataset: z.array(z.any()).min(1).max(2000),
+  user_id: z.string().min(1).optional(),
+  competitor_id: z.string().min(1).optional(),
+  save: z.boolean().optional(),
+});
+
+/**
  * Schema for text generation request
  */
 export const TextGenerationRequestSchema = z.object({
@@ -98,3 +109,6 @@ export type CompetitorAnalysisRequest = z.infer<
 >;
 export type TextGenerationRequest = z.infer<typeof TextGenerationRequestSchema>;
 export type GeminiApiRequest = z.infer<typeof GeminiApiRequestSchema>;
+export type SimpleDatasetAnalysisRequest = z.infer<
+  typeof SimpleDatasetAnalysisRequestSchema
+>;

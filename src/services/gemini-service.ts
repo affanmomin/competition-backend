@@ -1,4 +1,6 @@
 import axios from "axios";
+import * as fs from "node:fs";
+import * as path from "node:path";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
@@ -58,6 +60,94 @@ export interface GeminiTextResponse {
 export interface GeminiWebpageRequest {
   dataset: any[];
   companyName?: string;
+}
+
+// --- Utility: Robust JSON extraction/parsing for Gemini responses ---
+function dumpGeminiRaw(label: string, raw: string): string {
+  try {
+    const dir = path.resolve(process.cwd(), "tmp", "gemini");
+    fs.mkdirSync(dir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const file = path.join(dir, `${label}-${ts}.raw.txt`);
+    fs.writeFileSync(file, raw, "utf-8");
+    return file;
+  } catch (e) {
+    console.warn("Failed to write raw Gemini output:", e);
+    return "";
+  }
+}
+
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let prev = "";
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === '"' && prev !== "\\") inString = false;
+    } else {
+      if (ch === '"') inString = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    prev = ch;
+  }
+  return null;
+}
+
+function stripCodeFences(s: string): string {
+  const trimmed = s.trim();
+  if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
+    return trimmed
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+  }
+  return trimmed;
+}
+
+function sanitizeJsonText(s: string): string {
+  return s
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/,(\s*[}\]])/g, "$1");
+}
+
+function parseGeminiJson<T = unknown>(raw: string, label = "gemini"): T {
+  const attempts: string[] = [];
+  const push = (x?: string | null) => {
+    if (x && x.trim()) attempts.push(x.trim());
+  };
+  push(raw);
+  push(stripCodeFences(raw));
+  push(extractFirstJsonObject(raw));
+
+  for (const att of attempts) {
+    const cleaned = sanitizeJsonText(att);
+    try {
+      return JSON.parse(cleaned) as T;
+    } catch {}
+  }
+
+  const extracted = extractFirstJsonObject(stripCodeFences(raw));
+  if (extracted) {
+    try {
+      return JSON.parse(sanitizeJsonText(extracted)) as T;
+    } catch {}
+  }
+
+  const preview = raw.slice(0, 400).replace(/\s+/g, " ");
+  const filePath = dumpGeminiRaw(label, raw);
+  console.warn(
+    `Gemini JSON parse failed (${label}). Preview: ${preview}...` +
+      (filePath ? `\nRaw saved to: ${filePath}` : ""),
+  );
+  throw new SyntaxError(`Failed to parse Gemini JSON for ${label}.`);
 }
 
 /**
@@ -246,7 +336,10 @@ Process the following competitor posts and comments:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text; // Removed `.json()` call
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "social",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -375,7 +468,10 @@ Process the following competitor landing page text:
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "website",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -674,7 +770,10 @@ Process the following Twitter posts and comments from competitor accounts:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "twitter",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -865,7 +964,10 @@ Process the following LinkedIn posts and their comments:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "linkedin",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -875,7 +977,6 @@ Process the following LinkedIn posts and their comments:`;
     throw error;
   }
 }
-
 
 export async function analyzeGoogleMapsCompetitorData(
   request: GeminiAnalysisRequest,
@@ -1053,7 +1154,10 @@ Process the following Google Maps reviews/posts and their comments:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "google-maps",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -1239,7 +1343,10 @@ Process the following Play Store reviews and their comments:`;
     }
 
     const content = response.data.candidates[0].content.parts[0].text;
-    const parsedContent = JSON.parse(content) as GeminiAnalysisResponse;
+    const parsedContent = parseGeminiJson<GeminiAnalysisResponse>(
+      content,
+      "google-playstore",
+    );
 
     return parsedContent;
   } catch (error) {
@@ -1249,5 +1356,3 @@ Process the following Play Store reviews and their comments:`;
     throw error;
   }
 }
-
-

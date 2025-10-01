@@ -48,6 +48,6 @@
 //       return browser;
 //     }
 
-//     return chromium.launch({ headless: true });
+//     return chromium.launch({ headless: false });
 //   }
 // }

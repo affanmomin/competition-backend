@@ -1,15 +1,18 @@
 import { FastifyInstance } from "fastify";
 import {
   analyzeCompetitorData,
+  analyzeGoogleMapsCompetitorData,
+  analyzePlayStoreCompetitorData,
   generateText,
   type GeminiAnalysisRequest,
-  type GeminiTextRequest
+  type GeminiTextRequest,
 } from "../services/gemini-service";
 import {
   CompetitorAnalysisRequestSchema,
   TextGenerationRequestSchema,
   CompetitorAnalysisResponseSchema,
-  TextGenerationResponseSchema
+  TextGenerationResponseSchema,
+  SimpleDatasetAnalysisRequestSchema,
 } from "../schemas/gemini-schemas";
 import { insertCompetitorAnalysisData } from "../services/competitor-analysis-service";
 
@@ -17,6 +20,109 @@ import { insertCompetitorAnalysisData } from "../services/competitor-analysis-se
  * Gemini API routes for AI-powered analysis and text generation
  */
 export default async function geminiRoutes(fastify: FastifyInstance) {
+  /**
+   * Analyze Play Store dataset (testing endpoint)
+   * POST /api/gemini/analyze/playstore
+   */
+  fastify.post("/analyze/playstore", {
+    schema: {
+      description:
+        "Analyze Google Play Store review JSON and return structured insights",
+      tags: ["gemini"],
+      body: {
+        type: "object",
+        required: ["dataset"],
+        properties: {
+          dataset: { type: "array", items: { type: "object" } },
+          user_id: { type: "string" },
+          competitor_id: { type: "string" },
+          save: { type: "boolean" },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const { dataset, user_id, competitor_id, save } =
+          SimpleDatasetAnalysisRequestSchema.parse(request.body);
+
+        const analysisRequest: GeminiAnalysisRequest = { dataset };
+        const result = await analyzePlayStoreCompetitorData(analysisRequest);
+
+        const validatedResult = CompetitorAnalysisResponseSchema.parse(result);
+
+        if (save && user_id && competitor_id) {
+          await insertCompetitorAnalysisData({
+            userId: user_id,
+            competitorId: competitor_id,
+            analysisData: validatedResult,
+          });
+        }
+
+        return { success: true, data: validatedResult };
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to analyze Play Store data",
+        });
+      }
+    },
+  });
+
+  /**
+   * Analyze Google Maps dataset (testing endpoint)
+   * POST /api/gemini/analyze/google-maps
+   */
+  fastify.post("/analyze/google-maps", {
+    schema: {
+      description:
+        "Analyze Google Maps reviews/forum JSON and return structured insights",
+      tags: ["gemini"],
+      body: {
+        type: "object",
+        required: ["dataset"],
+        properties: {
+          dataset: { type: "array", items: { type: "object" } },
+          user_id: { type: "string" },
+          competitor_id: { type: "string" },
+          save: { type: "boolean" },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const { dataset, user_id, competitor_id, save } =
+          SimpleDatasetAnalysisRequestSchema.parse(request.body);
+
+        const analysisRequest: GeminiAnalysisRequest = { dataset };
+        const result = await analyzeGoogleMapsCompetitorData(analysisRequest);
+
+        const validatedResult = CompetitorAnalysisResponseSchema.parse(result);
+
+        if (save && user_id && competitor_id) {
+          await insertCompetitorAnalysisData({
+            userId: user_id,
+            competitorId: competitor_id,
+            analysisData: validatedResult,
+          });
+        }
+
+        return { success: true, data: validatedResult };
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to analyze Google Maps data",
+        });
+      }
+    },
+  });
   /**
    * Analyze competitor data using Gemini AI
    * POST /api/gemini/analyze
@@ -32,24 +138,24 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
           dataset: {
             type: "array",
             description: "Array of social media posts and comments to analyze",
-            items: { type: "object" }
+            items: { type: "object" },
           },
           prompt: {
             type: "string",
             description: "Optional custom prompt for analysis",
-            maxLength: 2000
+            maxLength: 2000,
           },
           user_id: {
             type: "string",
             description: "ID of the user performing the analysis",
-            minLength: 1
+            minLength: 1,
           },
           competitor_id: {
             type: "string",
             description: "Optional ID of the competitor being analyzed",
-            minLength: 1
-          }
-        }
+            minLength: 1,
+          },
+        },
       },
       response: {
         200: {
@@ -65,9 +171,12 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                     type: "object",
                     properties: {
                       canonical: { type: "string" },
-                      evidence_ids: { type: "array", items: { type: "string" } }
-                    }
-                  }
+                      evidence_ids: {
+                        type: "array",
+                        items: { type: "string" },
+                      },
+                    },
+                  },
                 },
                 complaints: {
                   type: "array",
@@ -75,9 +184,12 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                     type: "object",
                     properties: {
                       canonical: { type: "string" },
-                      evidence_ids: { type: "array", items: { type: "string" } }
-                    }
-                  }
+                      evidence_ids: {
+                        type: "array",
+                        items: { type: "string" },
+                      },
+                    },
+                  },
                 },
                 leads: {
                   type: "array",
@@ -87,9 +199,9 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                       username: { type: "string" },
                       platform: { type: "string" },
                       excerpt: { type: "string" },
-                      reason: { type: "string" }
-                    }
-                  }
+                      reason: { type: "string" },
+                    },
+                  },
                 },
                 alternatives: {
                   type: "array",
@@ -97,34 +209,39 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      evidence_ids: { type: "array", items: { type: "string" } },
-                      platform: { type: "string" }
-                    }
-                  }
-                }
-              }
-            }
-          }
+                      evidence_ids: {
+                        type: "array",
+                        items: { type: "string" },
+                      },
+                      platform: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         400: {
           type: "object",
           properties: {
             success: { type: "boolean" },
-            error: { type: "string" }
-          }
+            error: { type: "string" },
+          },
         },
         500: {
           type: "object",
           properties: {
             success: { type: "boolean" },
-            error: { type: "string" }
-          }
-        }
-      }
+            error: { type: "string" },
+          },
+        },
+      },
     },
     handler: async (request, reply) => {
       try {
-        const validatedData = CompetitorAnalysisRequestSchema.parse(request.body);
+        const validatedData = CompetitorAnalysisRequestSchema.parse(
+          request.body,
+        );
 
         const analysisRequest: GeminiAnalysisRequest = {
           dataset: validatedData.dataset,
@@ -139,12 +256,12 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
         await insertCompetitorAnalysisData({
           userId: validatedData.user_id,
           competitorId: validatedData.competitor_id,
-          analysisData: validatedResult
+          analysisData: validatedResult,
         });
 
         return {
           success: true,
-          data: validatedResult
+          data: validatedResult,
         };
       } catch (error) {
         fastify.log.error(error);
@@ -153,31 +270,35 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
           if (error.message.includes("GEMINI_API_KEY")) {
             return reply.status(500).send({
               success: false,
-              error: "Gemini API key not configured"
+              error: "Gemini API key not configured",
             });
           }
 
           if (error.message.includes("validation")) {
             return reply.status(400).send({
               success: false,
-              error: `Validation error: ${error.message}`
+              error: `Validation error: ${error.message}`,
             });
           }
 
-          if (error.message.includes("database") || error.message.includes("INSERT") || error.message.includes("relation")) {
+          if (
+            error.message.includes("database") ||
+            error.message.includes("INSERT") ||
+            error.message.includes("relation")
+          ) {
             return reply.status(500).send({
               success: false,
-              error: "Database error while saving analysis results"
+              error: "Database error while saving analysis results",
             });
           }
         }
 
         return reply.status(500).send({
           success: false,
-          error: "Failed to analyze competitor data"
+          error: "Failed to analyze competitor data",
         });
       }
-    }
+    },
   });
 
   /**
@@ -196,14 +317,14 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
             type: "string",
             description: "Input text to process",
             minLength: 1,
-            maxLength: 10000
+            maxLength: 10000,
           },
           prompt: {
             type: "string",
             description: "Optional custom prompt for text generation",
-            maxLength: 1000
-          }
-        }
+            maxLength: 1000,
+          },
+        },
       },
       response: {
         200: {
@@ -219,28 +340,28 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
                   properties: {
                     prompt_tokens: { type: "number" },
                     completion_tokens: { type: "number" },
-                    total_tokens: { type: "number" }
-                  }
-                }
-              }
-            }
-          }
+                    total_tokens: { type: "number" },
+                  },
+                },
+              },
+            },
+          },
         },
         400: {
           type: "object",
           properties: {
             success: { type: "boolean" },
-            error: { type: "string" }
-          }
+            error: { type: "string" },
+          },
         },
         500: {
           type: "object",
           properties: {
             success: { type: "boolean" },
-            error: { type: "string" }
-          }
-        }
-      }
+            error: { type: "string" },
+          },
+        },
+      },
     },
     handler: async (request, reply) => {
       try {
@@ -248,7 +369,7 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
 
         const textRequest: GeminiTextRequest = {
           text: validatedData.text,
-          prompt: validatedData.prompt
+          prompt: validatedData.prompt,
         };
 
         const result = await generateText(textRequest);
@@ -258,7 +379,7 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
 
         return {
           success: true,
-          data: validatedResult
+          data: validatedResult,
         };
       } catch (error) {
         fastify.log.error(error);
@@ -267,24 +388,24 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
           if (error.message.includes("GEMINI_API_KEY")) {
             return reply.status(500).send({
               success: false,
-              error: "Gemini API key not configured"
+              error: "Gemini API key not configured",
             });
           }
 
           if (error.message.includes("validation")) {
             return reply.status(400).send({
               success: false,
-              error: `Validation error: ${error.message}`
+              error: `Validation error: ${error.message}`,
             });
           }
         }
 
         return reply.status(500).send({
           success: false,
-          error: "Failed to generate text"
+          error: "Failed to generate text",
         });
       }
-    }
+    },
   });
 
   /**
@@ -301,10 +422,10 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
           properties: {
             success: { type: "boolean" },
             status: { type: "string" },
-            api_key_configured: { type: "boolean" }
-          }
-        }
-      }
+            api_key_configured: { type: "boolean" },
+          },
+        },
+      },
     },
     handler: async (request, reply) => {
       const apiKeyConfigured = !!process.env.GEMINI_API_KEY;
@@ -312,8 +433,8 @@ export default async function geminiRoutes(fastify: FastifyInstance) {
       return {
         success: true,
         status: apiKeyConfigured ? "ready" : "not_configured",
-        api_key_configured: apiKeyConfigured
+        api_key_configured: apiKeyConfigured,
       };
-    }
+    },
   });
 }

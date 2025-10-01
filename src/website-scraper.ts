@@ -169,7 +169,14 @@ async function lazyNudge(
 }
 
 async function scrapeWebsiteOnce(targetUrl: string) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: false,
+    proxy: {
+      server: "http://gw.dataimpulse.com:823",
+      username: "2cef711aaa1a060b00b2",
+      password: "71e56626760e1077",
+    },
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -315,6 +322,7 @@ export async function scrapeCompanyWebsite(
     // Try to construct likely website URLs
     const companySlug = companyName.toLowerCase().replace(/\s+/g, "");
     const possibleUrls = [
+      `https://www.${companySlug}.in`,
       `https://www.${companySlug}.ai`,
       `https://www.${companySlug}.com`,
       `https://${companySlug}.com`,
