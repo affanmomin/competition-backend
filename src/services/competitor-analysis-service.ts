@@ -1,5 +1,5 @@
-import client from '../db';
-import { GeminiAnalysisResponse } from './gemini-service';
+import client from "../db";
+import { GeminiAnalysisResponse } from "./gemini-service";
 
 export interface CompetitorAnalysisInsertRequest {
   userId: string;
@@ -13,7 +13,7 @@ export interface CompetitorAnalysisInsertRequest {
 export async function insertComplaints(
   userId: string,
   competitorId: string | null,
-  complaints: GeminiAnalysisResponse['complaints']
+  complaints: GeminiAnalysisResponse["complaints"],
 ): Promise<void> {
   if (complaints.length === 0) return;
 
@@ -27,9 +27,9 @@ export async function insertComplaints(
     await client.query(query, [
       competitorId,
       complaint.canonical,
-      (complaint as any).platform || 'unknown',
+      (complaint as any).platform || "unknown",
       complaint.evidence_ids, // PostgreSQL driver will handle the array conversion
-      new Date()
+      new Date(),
     ]);
   }
 }
@@ -40,7 +40,7 @@ export async function insertComplaints(
 export async function insertAlternatives(
   userId: string,
   competitorId: string | null,
-  alternatives: GeminiAnalysisResponse['alternatives']
+  alternatives: GeminiAnalysisResponse["alternatives"],
 ): Promise<void> {
   if (alternatives.length === 0) return;
 
@@ -55,10 +55,10 @@ export async function insertAlternatives(
       userId,
       competitorId,
       alternative.name,
-      alternative.platform || 'unknown',
+      alternative.platform || "unknown",
       alternative.evidence_ids, // Don't JSON.stringify - keep as array
       1, // mentions_count starts at 1
-      new Date()
+      new Date(),
     ]);
   }
 }
@@ -69,7 +69,7 @@ export async function insertAlternatives(
 export async function insertLeads(
   userId: string,
   competitorId: string | null,
-  leads: GeminiAnalysisResponse['leads']
+  leads: GeminiAnalysisResponse["leads"],
 ): Promise<void> {
   if (leads.length === 0) return;
 
@@ -88,8 +88,8 @@ export async function insertLeads(
       lead.platform,
       lead.excerpt,
       lead.reason,
-      'new',
-      new Date()
+      "new",
+      new Date(),
     ]);
   }
 }
@@ -100,7 +100,7 @@ export async function insertLeads(
 export async function insertFeatures(
   userId: string,
   competitorId: string | null,
-  features: GeminiAnalysisResponse['features']
+  features: GeminiAnalysisResponse["features"],
 ): Promise<void> {
   if (features.length === 0) return;
 
@@ -117,11 +117,11 @@ export async function insertFeatures(
       competitorId,
       feature.canonical,
       feature.evidence_ids,
-      (feature as any).feature_type || 'new',
-      (feature as any).impact_level || 'minor',
+      (feature as any).feature_type || "new",
+      (feature as any).impact_level || "minor",
       (feature as any).confidence_score || 0.8,
       new Date(),
-      new Date()
+      new Date(),
     ]);
   }
 }
@@ -129,21 +129,31 @@ export async function insertFeatures(
 /**
  * Insert all competitor analysis data into the database
  */
-export async function insertCompetitorAnalysisData(request: CompetitorAnalysisInsertRequest): Promise<void> {
+export async function insertCompetitorAnalysisData(
+  request: CompetitorAnalysisInsertRequest,
+): Promise<void> {
   const { userId, competitorId, analysisData } = request;
-  
+
   try {
     // Begin transaction
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
     // Insert complaints
     if (analysisData.complaints && analysisData.complaints.length > 0) {
-      await insertComplaints(userId, competitorId || null, analysisData.complaints);
+      await insertComplaints(
+        userId,
+        competitorId || null,
+        analysisData.complaints,
+      );
     }
 
     // Insert alternatives
     if (analysisData.alternatives && analysisData.alternatives.length > 0) {
-      await insertAlternatives(userId, competitorId || null, analysisData.alternatives);
+      await insertAlternatives(
+        userId,
+        competitorId || null,
+        analysisData.alternatives,
+      );
     }
 
     // Insert leads
@@ -157,11 +167,11 @@ export async function insertCompetitorAnalysisData(request: CompetitorAnalysisIn
     }
 
     // Commit transaction
-    await client.query('COMMIT');
+    await client.query("COMMIT");
   } catch (error) {
     // Rollback transaction on error
-    await client.query('ROLLBACK');
-    console.error('Error inserting competitor analysis data:', error);
+    await client.query("ROLLBACK");
+    console.error("Error inserting competitor analysis data:", error);
     throw error;
   }
 }

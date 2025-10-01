@@ -1,10 +1,10 @@
 // Constants for platform source IDs
 export const PLATFORM_SOURCE_IDS = {
-  TWITTER: "5d53c057-6e63-47c6-9301-192a3b9fa1d4",
-  LINKEDIN: "4a267045-dbfc-432c-96a5-17a9da542248",
-  WEBSITE: "da6acd0d-7b5e-4aec-8d0c-9126220a8341",
-  GOOGLE_MAPS: "8e7857f1-d153-4470-bd6a-cf4ad79bb8fe",
-  GOOGLE_PLAYSTORE: "4ee3988d-70a4-4dd4-8708-5441de698a38",
+  TWITTER: "14cd087d-b4c2-4356-ae81-6cbec3c8acbf",
+  LINKEDIN: "ddb82018-1361-428d-bcde-b0e4517ed28d",
+  WEBSITE: "348977d6-18c5-4ba8-bbf6-3774d7ed6a30",
+  GOOGLE_MAPS: "06ccac39-70bc-43ae-bfca-37590669e9e0",
+  GOOGLE_PLAYSTORE: "feebc6ba-ea7f-4414-a111-fa15962eb03e",
 } as const;
 
 // Database error codes

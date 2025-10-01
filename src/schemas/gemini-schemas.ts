@@ -33,10 +33,10 @@ export const AlternativeItemSchema = z.object({
  * Schema for competitor analysis response
  */
 export const CompetitorAnalysisResponseSchema = z.object({
-  features: z.array(EvidenceItemSchema).max(5),
-  complaints: z.array(EvidenceItemSchema).max(5),
-  leads: z.array(LeadItemSchema).max(5),
-  alternatives: z.array(AlternativeItemSchema).max(5),
+  features: z.array(EvidenceItemSchema).max(25),
+  complaints: z.array(EvidenceItemSchema).max(25),
+  leads: z.array(LeadItemSchema).max(25),
+  alternatives: z.array(AlternativeItemSchema).max(25),
 });
 
 /**
