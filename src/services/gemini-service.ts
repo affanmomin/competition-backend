@@ -849,7 +849,7 @@ export async function analyzeLinkedInCompetitorData(
     throw new Error("GEMINI_API_KEY environment variable is required");
   }
 
-  const defaultPrompt = `# You are a precision LinkedIn analysis engine for competitor research. Extract ONLY high-value, structured insights from LinkedIn company posts and their comments.
+  const defaultPrompt = `# You are a precision LinkedIn analysis engine for competitor research. Extract structured insights from LinkedIn company posts and their comments.
 
 IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting, code blocks, or explanatory text. The response must be a valid JSON object that can be parsed directly.
 
@@ -873,7 +873,7 @@ Evidence ID policy for LinkedIn (MUST follow exactly):
 ## 🎯 Analysis Categories (Extract ONLY these 4)
 
 ### 1. FEATURES
-Product announcements, launches, updates, new capabilities, integrations, or deprecations explicitly mentioned in post text. If a comment clearly reveals a new feature or update confirmed by the company, include it.
+Capture both **explicit product/service capabilities** (announcements, updates, integrations, etc.) AND **explicit praises** (staff helpfulness, service quality, product quality, store ambiance, unique experiences).  
 
 ### 2. COMPLAINTS
 User pain points, bugs, service issues, missing features, pricing concerns, or performance problems expressed in comments. Only include explicit dissatisfaction.
@@ -942,12 +942,6 @@ STRICT DATA VALIDATION:
 - platform MUST be "linkedin"
 - excerpt MUST be a direct quote from comment.text or post.text (max 200 chars)
 - canonical MUST be derived only from actual text content
-
-VERIFICATION REQUIREMENTS:
-- For features: require explicit mention of product capability, update, or launch
-- For complaints: require explicit dissatisfaction in a comment
-- For leads: require explicit switching intent, evaluation, or strong dissatisfaction
-- For alternatives: require explicit, specific product/service names
 
 CONFIDENCE SCORING:
 - Use 0.6-1.0 only; exclude items < 0.6

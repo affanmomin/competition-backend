@@ -554,6 +554,7 @@ export async function scrapeCompanyPosts(companyName: string): Promise<any[]> {
     await page.goto("https://www.linkedin.com/feed/", {
       waitUntil: "domcontentloaded",
     });
+    await page.waitForTimeout(6000); //wa
 
     await page.goto(pageUrl, { waitUntil: "domcontentloaded" });
 
