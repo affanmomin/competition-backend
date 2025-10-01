@@ -312,60 +312,48 @@ function extractWebsiteData(rawHtml: string, finalUrl: string) {
 
 /**
  * Scrapes a company website for content analysis
- * @param companyName - The company name to construct website URL
+ * @param websiteUrl - The exact website URL to scrape
  * @returns Array of structured data for analysis
  */
 export async function scrapeCompanyWebsite(
-  companyName: string,
+  websiteUrl: string,
 ): Promise<any[]> {
   try {
-    // Try to construct likely website URLs
-    const companySlug = companyName.toLowerCase().replace(/\s+/g, "");
-    const possibleUrls = [
-      `https://www.${companySlug}.in`,
-      `https://www.${companySlug}.ai`,
-      `https://www.${companySlug}.com`,
-      `https://${companySlug}.com`,
-      `https://www.${companySlug}.io`,
-      `https://${companySlug}.io`,
-    ];
+    console.log(`Attempting to scrape: ${websiteUrl}`);
 
     let result = null;
     let lastError = null;
 
-    // Try each URL with retries
-    for (const url of possibleUrls) {
-      console.log(`Attempting to scrape: ${url}`);
-
-      let attempt = 0;
-      while (attempt <= RETRIES) {
-        try {
-          result = await scrapeWebsiteOnce(url);
-          break;
-        } catch (e) {
-          lastError = e;
-          attempt++;
-          if (attempt <= RETRIES) {
-            await new Promise((r) => setTimeout(r, 1000 * attempt));
-          }
+    // Try to scrape the provided URL with retries
+    let attempt = 0;
+    while (attempt <= RETRIES) {
+      try {
+        result = await scrapeWebsiteOnce(websiteUrl);
+        break;
+      } catch (e) {
+        lastError = e;
+        attempt++;
+        if (attempt <= RETRIES) {
+          console.log(`Retry attempt ${attempt} for ${websiteUrl}`);
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
         }
-      }
-
-      if (result) {
-        console.log(`Successfully scraped: ${url}`);
-        const extractedData = extractWebsiteData(
-          result.rawHtml,
-          result.finalUrl,
-        );
-        return [extractedData];
       }
     }
 
+    if (result) {
+      console.log(`Successfully scraped: ${websiteUrl}`);
+      const extractedData = extractWebsiteData(
+        result.rawHtml,
+        result.finalUrl,
+      );
+      return [extractedData];
+    }
+
     throw new Error(
-      `Failed to scrape any website for ${companyName}. Last error: ${lastError?.message}`,
+      `Failed to scrape website ${websiteUrl}. Last error: ${lastError?.message}`,
     );
   } catch (error) {
-    console.error(`Error scraping website for ${companyName}:`, error);
+    console.error(`Error scraping website ${websiteUrl}:`, error);
     throw error;
   }
 }

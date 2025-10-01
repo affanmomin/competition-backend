@@ -282,16 +282,15 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                     `Starting Google Play Store scraping for: ${targetName}`,
                   );
                   {
-                    const url =
-                      platform.url ||
-                      (targetName.startsWith("http") ? targetName : undefined);
-                    if (!url) {
+                    const playStoreUrl = platform.url || platform.username;
+                    if (!playStoreUrl || !playStoreUrl.includes('play.google.com')) {
                       console.warn(
-                        "Play Store requires a full app URL (e.g., https://play.google.com/store/apps/details?id=...) passed as platform.url",
+                        "Play Store requires a full app URL (e.g., https://play.google.com/store/apps/details?id=...) passed as platform.url or platform.username",
                       );
                       scraperData = [];
                     } else {
-                      scraperData = await scrapeGooglePlayStoreReviews(url, {
+                      console.log(`Using Play Store URL: ${playStoreUrl}`);
+                      scraperData = await scrapeGooglePlayStoreReviews(playStoreUrl, {
                         headless: false,
                         maxReviews: 50,
                       });
@@ -739,11 +738,21 @@ export default async function competitorsRoutes(fastify: FastifyInstance) {
                   console.log(
                     `Starting Google Play Store scraping for: ${targetName}`,
                   );
-
-                  scraperData = await scrapeGooglePlayStoreReviews(targetName, {
-                    headless: false,
-                    maxReviews: 5,
-                  });
+                  {
+                    const playStoreUrl = platform.url || platform.username;
+                    if (!playStoreUrl || !playStoreUrl.includes('play.google.com')) {
+                      console.warn(
+                        "Play Store requires a full app URL (e.g., https://play.google.com/store/apps/details?id=...) passed as platform.url or platform.username",
+                      );
+                      scraperData = [];
+                    } else {
+                      console.log(`Using Play Store URL: ${playStoreUrl}`);
+                      scraperData = await scrapeGooglePlayStoreReviews(playStoreUrl, {
+                        headless: false,
+                        maxReviews: 5,
+                      });
+                    }
+                  }
                   break;
 
                 default:
