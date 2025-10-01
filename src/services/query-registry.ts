@@ -517,69 +517,10 @@ export const queryRegistry: Record<string, QueryConfig> = {
     `,
     chartType: "table",
   },
-  "total-mentions": {
-    key: "total-mentions",
-    title: "Total Mentions",
-    description: "Total mentions with period comparison",
-    query: `
-      WITH this AS (
-        SELECT COUNT(*) AS v
-        FROM analyzed_posts ap
-        JOIN competitors c ON c.competitor_id = ap.competitor_id
-        WHERE c.user_id = $1
-          AND ap.analyzed_at >= $2 AND ap.analyzed_at < $3
-      ),
-      prev AS (
-        SELECT COUNT(*) AS v
-        FROM analyzed_posts ap
-        JOIN competitors c ON c.competitor_id = ap.competitor_id
-        WHERE c.user_id = $1
-          AND ap.analyzed_at >= ($2 - ($3 - $2))
-          AND ap.analyzed_at < $2
-      )
-      SELECT this.v AS current_value,
-             prev.v AS previous_value,
-             CASE WHEN prev.v = 0 THEN NULL
-                  ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
-      FROM this, prev;
-    `,
-    chartType: "number",
-  },
-  "negative-sentiment-percentage": {
-    key: "negative-sentiment-percentage",
-    title: "Negative Sentiment Percentage",
-    description:
-      "Negative sentiment percentage with period comparison (requires sentiment analysis)",
-    query: `
-      WITH base AS (
-        SELECT ap.*, c.user_id
-        FROM analyzed_posts ap
-        JOIN competitors c ON c.competitor_id = ap.competitor_id
-        WHERE c.user_id = $1
-      ),
-      this AS (
-        SELECT 0::float AS pct
-        FROM base
-        WHERE analyzed_at >= $2 AND analyzed_at < $3
-        LIMIT 1
-      ),
-      prev AS (
-        SELECT 0::float AS pct
-        FROM base
-        WHERE analyzed_at >= ($2 - ($3 - $2))
-          AND analyzed_at < $2
-        LIMIT 1
-      )
-      SELECT 0.00::numeric(10,2) AS current_pct,
-             0.00::numeric(10,2) AS previous_pct,
-             0.00::numeric(10,2) AS pct_change;
-    `,
-    chartType: "number",
-  },
-  "recurring-complaints": {
-    key: "recurring-complaints",
-    title: "Recurring Complaints",
-    description: "Recurring complaints with period comparison",
+  "total-complaints": {
+    key: "total-complaints",
+    title: "Total Complaints",
+    description: "Total complaints with period comparison",
     query: `
       WITH this AS (
         SELECT COUNT(*) AS v
@@ -595,6 +536,60 @@ export const queryRegistry: Record<string, QueryConfig> = {
         WHERE c.user_id = $1
           AND comp.last_updated >= ($2 - ($3 - $2))
           AND comp.last_updated < $2
+      )
+      SELECT this.v AS current_value,
+             prev.v AS previous_value,
+             CASE WHEN prev.v = 0 THEN NULL
+                  ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
+      FROM this, prev;
+    `,
+    chartType: "number",
+  },
+  "total-features-identified": {
+    key: "total-features-identified",
+    title: "Total Features Identified",
+    description: "Total features identified with period comparison",
+    query: `
+      WITH this AS (
+        SELECT COUNT(*) AS v
+        FROM features f
+        JOIN competitors c ON f.competitor_id = c.competitor_id
+        WHERE c.user_id = $1
+          AND f.last_updated >= $2 AND f.last_updated < $3
+      ),
+      prev AS (
+        SELECT COUNT(*) AS v
+        FROM features f
+        JOIN competitors c ON f.competitor_id = c.competitor_id
+        WHERE c.user_id = $1
+          AND f.last_updated >= ($2 - ($3 - $2))
+          AND f.last_updated < $2
+      )
+      SELECT this.v AS current_value,
+             prev.v AS previous_value,
+             CASE WHEN prev.v = 0 THEN NULL
+                  ELSE ROUND(100.0 * (this.v - prev.v) / prev.v, 2) END AS pct_change
+      FROM this, prev;
+    `,
+    chartType: "number",
+  },
+  "leads-identified": {
+    key: "leads-identified",
+    title: "Leads Identified",
+    description: "Total leads identified with period comparison",
+    query: `
+      WITH this AS (
+        SELECT COUNT(*) AS v
+        FROM leads l
+        WHERE l.user_id = $1
+          AND l.created_at >= $2 AND l.created_at < $3
+      ),
+      prev AS (
+        SELECT COUNT(*) AS v
+        FROM leads l
+        WHERE l.user_id = $1
+          AND l.created_at >= ($2 - ($3 - $2))
+          AND l.created_at < $2
       )
       SELECT this.v AS current_value,
              prev.v AS previous_value,
