@@ -1,4 +1,4 @@
-import type { FastifyPluginCallback, RouteHandlerMethod } from "fastify";
+import type { FastifyPluginAsync, RouteHandlerMethod } from "fastify";
 import searchRoutes from "./search";
 import authRoutes from "./auth";
 import cardRoutes from "./card";
@@ -7,8 +7,8 @@ import sourcesRoutes from "./sources";
 import geminiRoutes from "./gemini";
 import leadsRoutes from "./leads";
 
-const register: FastifyPluginCallback = async (server, options, done) => {
-  // Register search routes
+const register: FastifyPluginAsync = async (server, options) => {
+  // Register sub-plugins/routes (all should be async-style too)
   await searchRoutes(server);
   await authRoutes(server);
   await cardRoutes(server);
@@ -16,6 +16,7 @@ const register: FastifyPluginCallback = async (server, options, done) => {
   await sourcesRoutes(server);
   await geminiRoutes(server);
   await leadsRoutes(server);
+
   const getStatus: RouteHandlerMethod = async (request, reply) => {
     return reply.status(200).send("API is live");
   };
@@ -23,15 +24,9 @@ const register: FastifyPluginCallback = async (server, options, done) => {
   const successSchema = {};
 
   server.get("/", {
-    schema: {
-      response: {
-        200: successSchema,
-      },
-    },
+    schema: { response: { 200: successSchema } },
     handler: getStatus,
   });
-
-  done();
 };
 
 export default register;
