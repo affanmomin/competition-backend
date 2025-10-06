@@ -1,6 +1,92 @@
 import axios from "axios";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+// Common English stop words for manual filtering
+const englishStopWords = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "has",
+  "he",
+  "in",
+  "is",
+  "it",
+  "its",
+  "of",
+  "on",
+  "that",
+  "the",
+  "to",
+  "was",
+  "will",
+  "with",
+  "would",
+  "but",
+  "or",
+  "not",
+  "this",
+  "have",
+  "can",
+  "could",
+  "should",
+  "what",
+  "when",
+  "where",
+  "who",
+  "why",
+  "how",
+  "all",
+  "any",
+  "both",
+  "each",
+  "few",
+  "more",
+  "most",
+  "other",
+  "some",
+  "such",
+  "only",
+  "own",
+  "same",
+  "so",
+  "than",
+  "too",
+  "very",
+  "just",
+  "now",
+  "then",
+  "there",
+  "here",
+  "up",
+  "out",
+  "down",
+  "off",
+  "over",
+  "under",
+  "again",
+  "further",
+  "once",
+  "because",
+  "if",
+  "until",
+  "while",
+  "during",
+  "before",
+  "after",
+  "above",
+  "below",
+  "between",
+  "through",
+]);
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
@@ -202,6 +288,76 @@ function parseGeminiJson<T = unknown>(raw: string, label = "gemini"): T {
   throw new SyntaxError(`Failed to parse Gemini JSON for ${label}.`);
 }
 
+// --- Data Preprocessing Utilities ---
+
+/**
+ * Preprocesses text by removing noise: newlines, excessive dots, punctuations, and stop words
+ * @param text - The text to preprocess
+ * @returns Cleaned text
+ */
+export function preprocessText(text: string): string {
+  if (!text || typeof text !== "string") {
+    return "";
+  }
+
+  let cleanedText = text;
+
+  // 1. Remove excessive newlines and replace with spaces
+  cleanedText = cleanedText.replace(/\n+/g, " ");
+
+  // 2. Remove excessive dots (3 or more consecutive dots)
+  cleanedText = cleanedText.replace(/\.{3,}/g, "");
+
+  // 3. Remove most punctuation but keep essential ones for sentence structure
+  // Keep: periods, commas, question marks, exclamation marks
+  // Remove: brackets, quotes, hyphens, etc.
+  cleanedText = cleanedText.replace(/[^\w\s.,!?]/g, " ");
+
+  // 4. Remove extra spaces
+  cleanedText = cleanedText.replace(/\s+/g, " ");
+
+  // 5. Convert to lowercase for stop word removal
+  const words = cleanedText.toLowerCase().split(" ");
+
+  // 6. Remove stop words using manual stop words list
+  const filteredWords = words.filter(
+    (word) =>
+      word.length >= 2 &&
+      !englishStopWords.has(word) &&
+      !/^\d+$/.test(word) &&
+      word.trim() !== "",
+  );
+
+  // 7. Join back and clean up final spacing
+  return filteredWords.join(" ").trim();
+}
+
+/**
+ * Recursively preprocesses all string values in an object or array
+ * @param data - The data to preprocess (object, array, or primitive)
+ * @returns Preprocessed data with same structure
+ */
+export function preprocessData(data: any): any {
+  if (typeof data === "string") {
+    return preprocessText(data);
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => preprocessData(item));
+  }
+
+  if (data !== null && typeof data === "object") {
+    const processedObj: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      processedObj[key] = preprocessData(value);
+    }
+    return processedObj;
+  }
+
+  // Return primitives (numbers, booleans, null) as-is
+  return data;
+}
+
 /**
  * Analyzes social media data using Gemini AI for competitor research
  * @param request - The analysis request containing dataset and optional custom prompt
@@ -349,7 +505,12 @@ Clear switching intent: direct mentions of possible competitor alternatives, rec
 Process the following competitor posts and comments:`;
 
   const prompt = defaultPrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log("Original dataset size:", JSON.stringify(request.dataset).length);
+  console.log("Preprocessed dataset size:", datasetMinified.length);
   console.log(datasetMinified);
 
   //json ko theek karneka hai
@@ -482,7 +643,15 @@ Process the following competitor landing page text:
 `;
 
   const prompt = defaultPrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log(
+    "Original website dataset size:",
+    JSON.stringify(request.dataset).length,
+  );
+  console.log("Preprocessed website dataset size:", datasetMinified.length);
   console.log("Website dataset for analysis:", datasetMinified);
 
   const body = {
@@ -550,7 +719,13 @@ export async function generateText(
 
   const prompt =
     request.prompt || "Please provide a helpful response to the following:";
-  const fullPrompt = `${prompt}\n\n${request.text}`;
+
+  // Preprocess the text to remove noise before sending to LLM
+  const preprocessedText = preprocessText(request.text);
+  const fullPrompt = `${prompt}\n\n${preprocessedText}`;
+
+  console.log("Original text length:", request.text.length);
+  console.log("Preprocessed text length:", preprocessedText.length);
 
   const body = {
     contents: [
@@ -784,7 +959,15 @@ Clear switching intent: direct mentions of competitor alternatives, recommendati
 Process the following Twitter posts and comments from competitor accounts:`;
 
   const prompt = defaultPrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log(
+    "Original Twitter dataset size:",
+    JSON.stringify(request.dataset).length,
+  );
+  console.log("Preprocessed Twitter dataset size:", datasetMinified.length);
   console.log("Twitter dataset being processed:", datasetMinified);
 
   const body = {
@@ -972,7 +1155,15 @@ DATASET FIDELITY:
 Process the following LinkedIn posts and their comments:`;
 
   const prompt = defaultPrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log(
+    "Original LinkedIn dataset size:",
+    JSON.stringify(request.dataset).length,
+  );
+  console.log("Preprocessed LinkedIn dataset size:", datasetMinified.length);
   console.log("LinkedIn dataset being processed:", datasetMinified);
 
   const body = {
@@ -1162,7 +1353,15 @@ DATASET FIDELITY:
 Process the following Google Maps reviews/posts and their comments:`;
 
   const prompt = defaultPrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log(
+    "Original Google Maps dataset size:",
+    JSON.stringify(request.dataset).length,
+  );
+  console.log("Preprocessed Google Maps dataset size:", datasetMinified.length);
   console.log("Google Maps dataset being processed:", datasetMinified);
 
   const body = {
@@ -1370,7 +1569,15 @@ DATASET FIDELITY:
 Process the following Play Store reviews and their comments:`;
 
   const prompt = playStorePrompt;
-  const datasetMinified = JSON.stringify(request.dataset);
+
+  // Preprocess the dataset to remove noise before sending to LLM
+  const preprocessedDataset = preprocessData(request.dataset);
+  const datasetMinified = JSON.stringify(preprocessedDataset);
+  console.log(
+    "Original Play Store dataset size:",
+    JSON.stringify(request.dataset).length,
+  );
+  console.log("Preprocessed Play Store dataset size:", datasetMinified.length);
   console.log("Play Store dataset being processed:", datasetMinified);
 
   const body = {
