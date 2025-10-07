@@ -6,6 +6,7 @@ import competitorsRoutes from "./competitors";
 import sourcesRoutes from "./sources";
 import geminiRoutes from "./gemini";
 import leadsRoutes from "./leads";
+import paymentRoutes from "./payment";
 
 const register: FastifyPluginAsync = async (server, options) => {
   // Register sub-plugins/routes (all should be async-style too)
@@ -16,7 +17,10 @@ const register: FastifyPluginAsync = async (server, options) => {
   await sourcesRoutes(server);
   await geminiRoutes(server);
   await leadsRoutes(server);
+  await paymentRoutes(server);
 
+  // A simple route to check server status
+  
   const getStatus: RouteHandlerMethod = async (request, reply) => {
     return reply.status(200).send("API is live");
   };
