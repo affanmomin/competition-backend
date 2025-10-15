@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Integration - Competition Backend</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .plan-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .plan-card:hover {
+            border-color: #3f51b5;
+            transform: translateY(-5px);
+        }
+        .plan-card.professional {
+            border-color: #ff9800;
+        }
+        .plan-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .plan-price {
+            font-size: 36px;
+            font-weight: bold;
+            color: #3f51b5;
+            margin-bottom: 20px;
+        }
+        .professional .plan-price {
+            color: #ff9800;
+        }
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 30px;
+        }
+        .plan-features li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .plan-features li:before {
+            content: "✓ ";
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .pay-button {
+            background: linear-gradient(135deg, #3f51b5, #2196f3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .pay-button:hover {
+            background: linear-gradient(135deg, #2196f3, #3f51b5);
+            transform: scale(1.05);
+        }
+        .professional .pay-button {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+        .professional .pay-button:hover {
+            background: linear-gradient(135deg, #f57c00, #ff9800);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Choose Your Plan</h1>
+    
+    <div id="status" class="status"></div>
+    
+    <div class="plan-card" data-plan="standard">
+        <div class="plan-name">Standard Plan</div>
+        <div class="plan-price">₹1,000<span style="font-size: 16px; color: #666;">/month</span></div>
+        <ul class="plan-features">
+            <li>Up to 5 competitors</li>
+            <li>Basic analytics</li>
+            <li>Email support</li>
+            <li>30-day data retention</li>
+        </ul>
+        <button class="pay-button" onclick="createOrder('standard')">
+            Choose Standard Plan
+        </button>
+    </div>
+
+    <div class="plan-card professional" data-plan="professional">
+        <div class="plan-name">Professional Plan</div>
+        <div class="plan-price">₹3,000<span style="font-size: 16px; color: #666;">/month</span></div>
+        <ul class="plan-features">
+            <li>Unlimited competitors</li>
+            <li>Advanced analytics</li>
+            <li>Priority support</li>
+            <li>1-year data retention</li>
+            <li>Custom reports</li>
+            <li>API access</li>
+        </ul>
+        <button class="pay-button" onclick="createOrder('professional')">
+            Choose Professional Plan
+        </button>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:3000'; // Change this to your backend URL
+        const USER_ID = 'user123'; // Replace with actual user ID from your auth system
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Create payment order
+        async function createOrder(packageType) {
+            try {
+                showStatus('Creating order...', 'success');
+                document.body.classList.add('loading');
+                
+                // First get available packages
+                const packagesResponse = await fetch(`${API_BASE_URL}/api/payments/packages`);
+                const packagesData = await packagesResponse.json();
+                
+                if (!packagesData.success) {
+                    throw new Error('Failed to fetch packages');
+                }
+                
+                // Find the package by type
+                const selectedPackage = packagesData.data.find(pkg => pkg.package_type === packageType);
+                if (!selectedPackage) {
+                    throw new Error('Package not found');
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/api/payments/create-order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        packageId: selectedPackage.package_id,
+                        userId: USER_ID,
+                        customerEmail: 'customer@example.com', // Optional
+                        customerPhone: '+919876543210', // Optional
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to create order');
+                }
+                
+                // Initialize Razorpay payment
+                initializeRazorpayPayment(data.data, selectedPackage.package_id);
+                
+            } catch (error) {
+                console.error('Error creating order:', error);
+                showStatus('Error creating order: ' + error.message, 'error');
+            } finally {
+                document.body.classList.remove('loading');
+            }
+        }
+        
+        // Initialize Razorpay payment modal
+        function initializeRazorpayPayment(orderData, packageId) {
+            const options = {
+                key: orderData.key, // Razorpay key from backend
+                amount: orderData.amount, // Amount in paise
+                currency: orderData.currency,
+                name: 'Competition Backend',
+                description: `${orderData.package.name} Subscription`,
+                image: 'https://your-logo-url.com/logo.png', // Optional: Add your logo
+                order_id: orderData.orderId,
+                handler: function (response) {
+                    // Payment successful callback
+                    verifyPayment(response, packageId);
+                },
+                prefill: {
+                    name: 'Customer Name',
+                    email: 'customer@example.com',
+                    contact: '+919876543210'
+                },
+                notes: {
+                    packageId: packageId,
+                    userId: USER_ID
+                },
+                theme: {
+                    color: '#3f51b5'
+                },
+                modal: {
+                    ondismiss: function() {
+                        showStatus('Payment cancelled by user', 'error');
+                    }
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            
+            rzp.on('payment.failed', function (response) {
+                showStatus('Payment failed: ' + response.error.description, 'error');
+                console.error('Payment failed:', response.error);
+            });
+            
+            rzp.open();
+        }
+        
+        // Verify payment with backend
+        async function verifyPayment(razorpayResponse, packageId) {
+            try {
+                showStatus('Verifying payment...', 'success');
+                
+                const response = await fetch(`${API_BASE_URL}/api/payments/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: razorpayResponse.razorpay_order_id,
+                        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                        razorpay_signature: razorpayResponse.razorpay_signature,
+                        userId: USER_ID,
+                        packageId: packageId,
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('Payment successful! Your subscription is now active.', 'success');
+                    console.log('Payment verified successfully:', data);
+                    
+                    // Redirect to dashboard or show success message
+                    setTimeout(() => {
+                        window.location.href = '/dashboard'; // Redirect to your dashboard
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(data.error || 'Payment verification failed');
+                }
+                
+            } catch (error) {
+                console.error('Error verifying payment:', error);
+                showStatus('Payment verification failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Load user's current subscription status on page load
+        async function loadSubscriptionStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/payments/subscription?userId=${USER_ID}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const subscription = data.data;
+                    const endDate = new Date(subscription.end_date);
+                    const now = new Date();
+                    
+                    if (endDate > now) {
+                        showStatus(`You have an active ${subscription.plan_name} subscription until ${endDate.toLocaleDateString()}`, 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading subscription:', error);
+            }
+        }
+        
+        // Load subscription status when page loads
+        window.addEventListener('load', loadSubscriptionStatus);
+    </script>
+</body>
+</html>
